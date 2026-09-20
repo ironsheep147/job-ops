@@ -24,6 +24,7 @@ Extractor integrations are now registered through manifests and loaded automatic
 | [Seek](/docs/next/extractors/seek) | Australia/NZ job search via Apify | Requires Apify API token; actor runs incur cost ($1.50/1,000 results; free tier ~3,000/month) | `APIFY_TOKEN`, `SEEK_MAX_JOBS_PER_TERM`, `SEEK_APIFY_ACTOR_ID` | Calls the `unfenced-group/seek-com-au-scraper` Apify actor per term, maps results, and de-duplicates by source id / URL |
 | [FreeHire](/docs/next/extractors/freehire) | Broad job discovery through FreeHire's public agent API | No credentials required; API availability and rate limits are controlled by FreeHire | existing pipeline `searchTerms`, selected country/cities, `jobspyResultsWanted`, workplace type | Requests full Markdown descriptions and enriched job metadata, then de-duplicates original upstream URLs across sources |
 | [CareerOps US Sources](/docs/next/extractors/careerops-us) | US startup, technology, remote, and specialist discovery through CareerOps feeds | Public HTTPS feeds; bounded pagination; no credentials or browser automation | existing pipeline `searchTerms`, US location scope, `jobspyResultsWanted` | Normalizes descriptions, application URLs, posting dates, and remote eligibility evidence |
+| [US Job Boards](/docs/next/extractors/us-boards) | Amazon/AWS, IBM Careers, HigherEdJobs, plus configurable Breezy HR, Gem, Consider, and Getro boards | Public HTTPS APIs/RSS; ATS and talent-network sources require a canonical watchlist URL | existing pipeline `searchTerms`, selected country, `jobspyResultsWanted`; watchlists use a board URL | Adds US enterprise and higher-education discovery plus configurable startup and VC-network watchlists |
 | [UKVisaJobs](/docs/next/extractors/ukvisajobs) | UK visa sponsorship-focused roles | Requires authenticated session and periodic token/cookie refresh | `UKVISAJOBS_EMAIL`, `UKVISAJOBS_PASSWORD`, `UKVISAJOBS_MAX_JOBS`, `UKVISAJOBS_SEARCH_KEYWORD` | API pagination + dataset output; orchestrator de-dupes and may fetch missing descriptions |
 | [Manual Import](/docs/next/extractors/manual) | One-off jobs not covered by scrapers | Inference quality depends on model/provider and input quality; some URLs cannot be fetched reliably | App/API endpoints (`/api/manual-jobs/infer`, `/api/manual-jobs/import`) | Accepts text/HTML/URL, runs inference, then saves and scores job after review |
 
@@ -39,6 +40,7 @@ Extractor integrations are now registered through manifests and loaded automatic
 - Use **Seek** when targeting Australia/NZ roles via the Apify-powered Seek scraper.
 - Use **FreeHire** for broad API-backed coverage without another credential.
 - Use **CareerOps US Sources** for Built In, The Muse, and Hacker News US-focused coverage.
+- Use **US Job Boards** for Amazon/AWS, IBM, HigherEdJobs, and company-specific ATS or VC talent-network boards.
 - Use **Gradcracker** when targeting graduate pipelines in the UK.
 - Use **UKVisaJobs** for sponsorship-specific UK searches.
 - Use **Manual Import** when you already have a specific posting and need direct import.
@@ -69,6 +71,7 @@ Many runs combine sources: broad discovery first, then manual import for high-pr
 - [Seek](/docs/next/extractors/seek)
 - [FreeHire](/docs/next/extractors/freehire)
 - [CareerOps US Sources](/docs/next/extractors/careerops-us)
+- [US Job Boards](/docs/next/extractors/us-boards)
 - [UKVisaJobs](/docs/next/extractors/ukvisajobs)
 - [Manual Import](/docs/next/extractors/manual)
 - [Add an Extractor](/docs/next/workflows/add-an-extractor)

@@ -1,10 +1,10 @@
 import {
+  type CareerOpsProvider,
   fetchCareerOpsListings,
   toDraft,
   toWatchlistJob,
-  type CareerOpsProvider,
 } from "@career-boards/careerops";
-import type { ManualJobDraft, WatchlistSelectedSource } from "@shared/types";
+import type { ManualJobDraft } from "@shared/types";
 import { z } from "zod";
 import type { WatchlistCatalogSourceAdapter } from "./types";
 
@@ -29,6 +29,10 @@ const PROVIDERS: CareerOpsProvider[] = [
   "comeet",
   "collage",
   "cornerstone",
+  "breezy",
+  "gem",
+  "consider",
+  "getro",
 ];
 
 const LABELS: Record<CareerOpsProvider, string> = {
@@ -52,6 +56,10 @@ const LABELS: Record<CareerOpsProvider, string> = {
   comeet: "Comeet",
   collage: "Collage HR",
   cornerstone: "Cornerstone OnDemand",
+  breezy: "Breezy HR",
+  gem: "Gem",
+  consider: "Consider",
+  getro: "Getro",
 };
 
 const URL_HINTS: Record<CareerOpsProvider, string> = {
@@ -75,6 +83,10 @@ const URL_HINTS: Record<CareerOpsProvider, string> = {
   comeet: "https://api.comeet.co",
   collage: "https://api.collage.co/v1/positions/site",
   cornerstone: "https://company.csod.com/ux/ats/careersite",
+  breezy: "https://company.breezy.hr",
+  gem: "https://jobs.gem.com/company",
+  consider: "https://jobs.example.com/jobs?board=board-id",
+  getro: "https://jobs.example.com/jobs?collection=123",
 };
 
 const sourceSchema = z.object({
@@ -119,13 +131,25 @@ function canonicalUrl(provider: CareerOpsProvider, value: string): boolean {
                                 ? host === "api.collage.co"
                                 : provider === "cornerstone"
                                   ? host.endsWith(".csod.com")
-                                  : ["phenom", "avature", "radancy", "successfactors", "jibeapply"].includes(provider);
+                                  : provider === "breezy"
+                                    ? host.endsWith(".breezy.hr")
+                                    : provider === "gem"
+                                      ? host === "jobs.gem.com" ||
+                                        host === "api.gem.com"
+                                      : provider === "consider" ||
+                                          provider === "getro"
+                                        ? !/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(
+                                            host,
+                                          )
+                                        : false;
   } catch {
     return false;
   }
 }
 
-function createAdapter(provider: CareerOpsProvider): WatchlistCatalogSourceAdapter {
+function createAdapter(
+  provider: CareerOpsProvider,
+): WatchlistCatalogSourceAdapter {
   return {
     sourceType: provider,
     descriptor: {
@@ -145,25 +169,34 @@ function createAdapter(provider: CareerOpsProvider): WatchlistCatalogSourceAdapt
     },
     catalogSchema: z.array(sourceSchema),
     parseCatalogSources(entries) {
-      return z.array(sourceSchema).parse(entries).map((entry) => ({
-        id: sourceId(provider, entry.careersUrl),
-        label: entry.label,
-        sourceType: provider,
-        careersUrl: entry.careersUrl,
-        cxsJobsUrl: null,
-      }));
+      return z
+        .array(sourceSchema)
+        .parse(entries)
+        .map((entry) => ({
+          id: sourceId(provider, entry.careersUrl),
+          label: entry.label,
+          sourceType: provider,
+          careersUrl: entry.careersUrl,
+          cxsJobsUrl: null,
+        }));
     },
     hydrateSelectedSource(source) {
       return { ...source, sourceType: provider };
     },
     async normalizeCustomSelection(input) {
       const parsed = new URL(input.careersUrl);
-      if (parsed.protocol !== "https:") throw new Error("Careers URL must use HTTPS");
-      if (/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1$)/i.test(parsed.hostname)) {
+      if (parsed.protocol !== "https:")
+        throw new Error("Careers URL must use HTTPS");
+      if (
+        /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1$)/i.test(
+          parsed.hostname,
+        )
+      ) {
         throw new Error("Private or local careers hosts are not allowed");
       }
       const careersUrl = parsed.href.replace(/\/$/, "");
-      if (!canonicalUrl(provider, careersUrl)) throw new Error(`Use a canonical ${LABELS[provider]} careers URL`);
+      if (!canonicalUrl(provider, careersUrl))
+        throw new Error(`Use a canonical ${LABELS[provider]} careers URL`);
       return {
         label: input.label?.trim() || careersUrl,
         careersUrl,
@@ -186,9 +219,16 @@ function createAdapter(provider: CareerOpsProvider): WatchlistCatalogSourceAdapt
         input.source.label,
         input.signal,
       );
-      const row = rows.find((candidate) => candidate.sourceJobId === input.jobRef);
-      if (!row) throw new Error(`Job ${input.jobRef} was not found on the board`);
-      return { jobRef: input.jobRef, jobUrl: row.jobUrl, descriptionHtml: row.description ?? "" };
+      const row = rows.find(
+        (candidate) => candidate.sourceJobId === input.jobRef,
+      );
+      if (!row)
+        throw new Error(`Job ${input.jobRef} was not found on the board`);
+      return {
+        jobRef: input.jobRef,
+        jobUrl: row.jobUrl,
+        descriptionHtml: row.description ?? "",
+      };
     },
     async prepareImportDraft(input) {
       const rows = await fetchCareerOpsListings(
@@ -197,10 +237,17 @@ function createAdapter(provider: CareerOpsProvider): WatchlistCatalogSourceAdapt
         input.source.label,
         input.signal,
       );
-      const row = rows.find((candidate) => candidate.sourceJobId === input.jobRef);
-      if (!row) throw new Error(`Job ${input.jobRef} was not found on the board`);
+      const row = rows.find(
+        (candidate) => candidate.sourceJobId === input.jobRef,
+      );
+      if (!row)
+        throw new Error(`Job ${input.jobRef} was not found on the board`);
       const draft: ManualJobDraft = toDraft(row);
-      return { draft, source: `${provider}:${row.sourceJobId}`, sourceHost: new URL(row.jobUrl).hostname };
+      return {
+        draft,
+        source: `${provider}:${row.sourceJobId}`,
+        sourceHost: new URL(row.jobUrl).hostname,
+      };
     },
   };
 }

@@ -419,6 +419,10 @@ export type WatchedSourceType =
   | "comeet"
   | "collage"
   | "cornerstone"
+  | "breezy"
+  | "gem"
+  | "consider"
+  | "getro"
   | (string & {});
 
 export interface WatchlistSource {

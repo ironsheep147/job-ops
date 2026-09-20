@@ -112,6 +112,7 @@ COPY extractors/pythonorg/package*.json ./extractors/pythonorg/
 COPY extractors/a16zspeedrun/package*.json ./extractors/a16zspeedrun/
 COPY extractors/agenticjobs/package*.json ./extractors/agenticjobs/
 COPY extractors/generalistworld/package*.json ./extractors/generalistworld/
+COPY extractors/usboards/package*.json ./extractors/usboards/
 COPY extractors/browser-utils/package*.json ./extractors/browser-utils/
 
 # Install build-time Node dependencies on the native builder platform. The
@@ -160,6 +161,7 @@ COPY extractors/pythonorg ./extractors/pythonorg
 COPY extractors/a16zspeedrun ./extractors/a16zspeedrun
 COPY extractors/agenticjobs ./extractors/agenticjobs
 COPY extractors/generalistworld ./extractors/generalistworld
+COPY extractors/usboards ./extractors/usboards
 COPY extractors/browser-utils ./extractors/browser-utils
 
 # ============================================================================

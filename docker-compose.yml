@@ -143,6 +143,9 @@ services:
         - path: ./extractors/generalistworld
           target: /app/extractors/generalistworld
           action: sync+restart
+        - path: ./extractors/usboards
+          target: /app/extractors/usboards
+          action: sync+restart
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { careerOpsWatchlistAdapters } from "./careerops";
 
 describe("CareerOps Watchlist adapters", () => {
-  it("registers the seven US ATS source types", () => {
+  it("registers all supported Career-Ops source types", () => {
     expect(careerOpsWatchlistAdapters.map((adapter) => adapter.sourceType)).toEqual([
       "ashby",
       "lever",
@@ -24,6 +24,10 @@ describe("CareerOps Watchlist adapters", () => {
       "comeet",
       "collage",
       "cornerstone",
+      "breezy",
+      "gem",
+      "consider",
+      "getro",
     ]);
   });
 

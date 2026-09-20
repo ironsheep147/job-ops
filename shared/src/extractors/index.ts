@@ -32,6 +32,9 @@ export const EXTRACTOR_SOURCE_IDS = [
   "a16zspeedrun",
   "agenticjobs",
   "generalistworld",
+  "amazon",
+  "ibm",
+  "higheredjobs",
   "manual",
 ] as const;
 
@@ -121,6 +124,9 @@ export const EXTRACTOR_SOURCE_METADATA: Record<
   a16zspeedrun: { label: "a16z Speedrun Talent Network", order: 128, category: "pipeline" },
   agenticjobs: { label: "Agentic Engineering Jobs", order: 129, category: "pipeline" },
   generalistworld: { label: "Generalist World", order: 130, category: "pipeline" },
+  amazon: { label: "Amazon / AWS", order: 131, category: "pipeline" },
+  ibm: { label: "IBM Careers", order: 132, category: "pipeline" },
+  higheredjobs: { label: "HigherEdJobs", order: 133, category: "pipeline" },
   manual: { label: "Manual", order: 120, category: "manual" },
 };
 

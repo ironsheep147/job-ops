@@ -20,7 +20,11 @@ export type CareerOpsProvider =
   | "rippling"
   | "comeet"
   | "collage"
-  | "cornerstone";
+  | "cornerstone"
+  | "breezy"
+  | "gem"
+  | "consider"
+  | "getro";
 
 export interface CareerOpsListing {
   sourceJobId: string;
@@ -66,6 +70,10 @@ const HOSTS: Record<CareerOpsProvider, string[]> = {
   comeet: ["comeet.co", "api.comeet.co"],
   collage: ["api.collage.co"],
   cornerstone: ["csod.com"],
+  breezy: ["breezy.hr"],
+  gem: ["jobs.gem.com", "api.gem.com"],
+  consider: [],
+  getro: [],
 };
 
 function hostAllowed(provider: CareerOpsProvider, hostname: string): boolean {
@@ -95,6 +103,7 @@ async function request(
   url: string,
   kind: "json" | "text",
   signal?: AbortSignal,
+  init?: RequestInit,
 ): Promise<any> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 30_000);
@@ -102,6 +111,7 @@ async function request(
   signal?.addEventListener("abort", onAbort, { once: true });
   try {
     const response = await fetch(url, {
+      ...init,
       redirect: "error",
       signal: controller.signal,
     });
@@ -111,6 +121,209 @@ async function request(
     clearTimeout(timer);
     signal?.removeEventListener("abort", onAbort);
   }
+}
+
+async function fetchBreezy(
+  url: string,
+  employer: string,
+  signal?: AbortSignal,
+): Promise<CareerOpsListing[]> {
+  const parsed = new URL(url);
+  if (!/^[a-z0-9][a-z0-9-]*\.breezy\.hr$/i.test(parsed.hostname)) return [];
+  const rows = await request(`https://${parsed.hostname}/json`, "json", signal);
+  return mapGenericRows("breezy", Array.isArray(rows) ? rows : [], employer);
+}
+
+async function fetchGem(
+  url: string,
+  employer: string,
+  signal?: AbortSignal,
+): Promise<CareerOpsListing[]> {
+  const parsed = new URL(url);
+  const boardId =
+    parsed.hostname === "jobs.gem.com"
+      ? parsed.pathname.split("/").filter(Boolean)[0]
+      : null;
+  if (!boardId && parsed.hostname !== "api.gem.com") return [];
+  if (parsed.hostname === "api.gem.com") {
+    const payload = await request(parsed.href, "json", signal);
+    return mapGenericRows(
+      "gem",
+      Array.isArray(payload) ? payload : (payload?.job_posts ?? []),
+      employer,
+    );
+  }
+  const body = JSON.stringify([
+    {
+      operationName: "JobBoardList",
+      variables: { boardId },
+      query: `query JobBoardList($boardId: String!) { oatsExternalJobPostings(boardId: $boardId) { jobPostings { id extId title locations { name isRemote } } } }`,
+    },
+  ]);
+  const payload = await request(
+    "https://jobs.gem.com/api/public/graphql/batch",
+    "json",
+    signal,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json", batch: "true" },
+      body,
+    },
+  );
+  const rows = payload?.[0]?.data?.oatsExternalJobPostings?.jobPostings;
+  return Array.isArray(rows)
+    ? rows
+        .map((row: any) => ({
+          ...row,
+          url: `https://jobs.gem.com/${boardId}/${row.extId}`,
+          location: Array.isArray(row.locations)
+            ? row.locations
+                .map(
+                  (location: any) =>
+                    `${location?.name ?? ""}${location?.isRemote ? " Remote" : ""}`,
+                )
+                .filter(Boolean)
+                .join(", ")
+            : "",
+        }))
+        .flatMap((row: any) => mapGenericRows("gem", [row], employer))
+    : [];
+}
+
+function publicOrigin(url: string): URL | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" || parsed.hostname.includes(":"))
+      return null;
+    if (
+      /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(
+        parsed.hostname,
+      )
+    )
+      return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchConsider(
+  url: string,
+  employer: string,
+  signal?: AbortSignal,
+): Promise<CareerOpsListing[]> {
+  const parsed = publicOrigin(url);
+  if (!parsed) return [];
+  const boardId =
+    parsed.searchParams.get("board") ||
+    parsed.pathname.split("/").filter(Boolean).pop();
+  if (!boardId) return [];
+  const pageResponse = await fetch(`${parsed.origin}/jobs`, {
+    redirect: "error",
+    signal,
+    headers: { accept: "text/html,*/*", "user-agent": "JobOps/1.0" },
+  });
+  const pageHtml = await pageResponse.text();
+  const csrfToken = pageHtml.match(/"csrfToken"\s*:\s*"([^"]{8,})"/)?.[1];
+  const cookieValues =
+    typeof pageResponse.headers.getSetCookie === "function"
+      ? pageResponse.headers.getSetCookie()
+      : (pageResponse.headers.get("set-cookie") ?? "")
+          .split(/,(?=\s*\w+=)/)
+          .filter(Boolean);
+  const cookie = cookieValues
+    .map((value) => value.split(";")[0].trim())
+    .filter(Boolean)
+    .join("; ");
+  const payload = await request(
+    `${parsed.origin}/api-boards/search-jobs`,
+    "json",
+    signal,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json",
+        referer: `${parsed.origin}/jobs`,
+        ...(csrfToken ? { "x-csrf-token": csrfToken } : {}),
+        ...(cookie ? { cookie } : {}),
+      },
+      body: JSON.stringify({
+        meta: { size: 500 },
+        board: { id: boardId, isParent: true },
+        query: { promoteFeatured: true },
+      }),
+    },
+  );
+  const rows = Array.isArray(payload?.jobs) ? payload.jobs : [];
+  return rows.flatMap((row: any) =>
+    mapGenericRows(
+      "consider",
+      [
+        {
+          ...row,
+          url: row.url ?? row.applyUrl,
+          company: row.companyName,
+          location: Array.isArray(row.locations)
+            ? row.locations.join(", ")
+            : row.remote
+              ? "Remote"
+              : "",
+        },
+      ],
+      employer,
+    ),
+  );
+}
+
+async function fetchGetro(
+  url: string,
+  employer: string,
+  signal?: AbortSignal,
+): Promise<CareerOpsListing[]> {
+  const parsed = publicOrigin(url);
+  if (!parsed) return [];
+  const collection =
+    parsed.searchParams.get("collection") ||
+    parsed.pathname.split("/").filter(Boolean).pop();
+  if (!collection) return [];
+  const payload = await request(
+    `https://api.getro.com/api/v2/collections/${encodeURIComponent(collection)}/search/jobs`,
+    "json",
+    signal,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json",
+      },
+      body: JSON.stringify({
+        hitsPerPage: 100,
+        page: 0,
+        filters: { page: 0 },
+        query: "",
+      }),
+    },
+  );
+  const rows = Array.isArray(payload?.results?.jobs)
+    ? payload.results.jobs
+    : Array.isArray(payload?.jobs)
+      ? payload.jobs
+      : Array.isArray(payload)
+        ? payload
+        : [];
+  return mapGenericRows(
+    "getro",
+    rows.map((row: any) => ({
+      ...row,
+      url: row.url ?? row.apply_url ?? row.applyUrl,
+      company: row.company ?? row.company_name ?? row.organization?.name,
+      location: Array.isArray(row.locations)
+        ? row.locations.join(", ")
+        : row.location,
+    })),
+    employer,
+  );
 }
 
 async function retry<T>(
@@ -623,6 +836,14 @@ export async function fetchCareerOpsListings(
   signal?: AbortSignal,
 ): Promise<CareerOpsListing[]> {
   switch (provider) {
+    case "breezy":
+      return fetchBreezy(careersUrl, employer, signal);
+    case "gem":
+      return fetchGem(careersUrl, employer, signal);
+    case "consider":
+      return fetchConsider(careersUrl, employer, signal);
+    case "getro":
+      return fetchGetro(careersUrl, employer, signal);
     case "ashby":
       return fetchAshby(careersUrl, employer, signal);
     case "lever":
