@@ -23,7 +23,9 @@ async function request(url: string, init?: RequestInit): Promise<Response> {
   try {
     const response = await fetch(url, {
       ...init,
-      redirect: "error",
+      // These public feeds/API endpoints occasionally redirect to their
+      // canonical host or path. Follow that normal HTTP behavior.
+      redirect: "follow",
       signal: controller.signal,
     });
     if (!response.ok) {
@@ -143,14 +145,14 @@ async function fetchIbm(
     const body = {
       appId: "careers",
       scopes: ["careers2"],
-      query: { bool: { must: [] } },
+      query: { bool: { must: [{ query_string: { query } }] } },
       post_filter: ibmFilter(),
       size: 30,
       from,
       sort: [{ _score: "desc" }, { pageviews: "desc" }],
       lang: "zz",
       localeSelector: {},
-      sm: { query: "", lang: "zz" },
+      sm: { query, lang: "zz" },
       _source: [
         "_id",
         "title",

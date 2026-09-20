@@ -49,4 +49,37 @@ describe("US board extractors", () => {
     expect(response.success).toBe(true);
     expect(response.jobs).toEqual([]);
   });
+
+  it("follows redirects for public board feeds", async () => {
+    const fetchMock = vi.fn(
+      async () => new Response("<rss><channel /></rss>", { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await runUsBoard(context);
+
+    expect(response.success).toBe(true);
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ redirect: "follow" }),
+    );
+  });
+
+  it("sends the search term to IBM instead of fetching an unfiltered page", async () => {
+    const fetchMock = vi.fn(async () => Response.json({ hits: { hits: [] } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await runUsBoard({
+      ...context,
+      source: "ibm",
+      selectedSources: ["ibm"],
+      searchTerms: ["data engineer"],
+    });
+
+    expect(response.success).toBe(true);
+    const [, init] = fetchMock.mock.calls[0] ?? [];
+    const body = JSON.parse(String(init?.body));
+    expect(body.query.bool.must[0].query_string.query).toBe("data engineer");
+    expect(body.sm.query).toBe("data engineer");
+  });
 });

@@ -77,6 +77,16 @@ def _normalize_country_token(value: str) -> str:
     return COUNTRY_ALIASES.get(normalized, normalized)
 
 
+def _jobspy_country(value: str) -> str:
+    # JobSpy uses Indeed's short country tokens for its domain selection. The
+    # UI stores human-readable country keys, so passing "united states" here
+    # makes Indeed/Glassdoor build an invalid upstream host.
+    return {
+        "united states": "USA",
+        "united kingdom": "UK",
+    }.get(_normalize_country_token(value), value)
+
+
 def _is_country_level_location(location: str, country_indeed: str) -> bool:
     if not location.strip() or not country_indeed.strip():
         return False
@@ -108,7 +118,7 @@ def _scrape_for_sites(
         "is_remote": is_remote,
     }
     if country_indeed and country_indeed.strip():
-        kwargs["country_indeed"] = country_indeed
+        kwargs["country_indeed"] = _jobspy_country(country_indeed)
     if location and location.strip():
         kwargs["location"] = location
     return scrape_jobs(**kwargs)
