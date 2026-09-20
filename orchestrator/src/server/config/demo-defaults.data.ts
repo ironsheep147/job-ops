@@ -280,9 +280,6 @@ export const DEMO_SOURCE_BASE_URLS: Record<JobSource, string> = {
   a16zspeedrun: "https://speedrun.a16z.com",
   agenticjobs: "https://agenticjobs.co",
   generalistworld: "https://generalist.world",
-  amazon: "https://www.amazon.jobs",
-  ibm: "https://www.ibm.com/careers",
-  higheredjobs: "https://www.higheredjobs.com",
   manual: "https://example.com",
 };
 

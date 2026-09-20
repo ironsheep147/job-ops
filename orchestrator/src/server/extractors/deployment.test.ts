@@ -77,7 +77,6 @@ describe("extractor deployment config", () => {
       "a16zspeedrun",
       "agenticjobs",
       "generalistworld",
-      "usboards",
     ];
     for (const source of sources) {
       expect(dockerfile).toContain(

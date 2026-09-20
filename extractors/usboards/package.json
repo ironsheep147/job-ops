@@ -1,9 +1,0 @@
-{
-  "name": "usboards-extractor",
-  "version": "0.0.1",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "check:types": "tsc --noEmit"
-  }
-}

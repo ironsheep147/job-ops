@@ -223,21 +223,6 @@ const HEALTH_PROBE_CONFIG_BY_SOURCE: Record<
     selectedCountry: "united states",
     settings: { jobspyResultsWanted: "1" },
   },
-  amazon: {
-    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
-    selectedCountry: "united states",
-    settings: { jobspyResultsWanted: "1" },
-  },
-  ibm: {
-    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
-    selectedCountry: "united states",
-    settings: { jobspyResultsWanted: "1" },
-  },
-  higheredjobs: {
-    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
-    selectedCountry: "united states",
-    settings: { jobspyResultsWanted: "1" },
-  },
   manual: {
     searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
     selectedCountry: DEFAULT_HEALTH_SELECTED_COUNTRY,
