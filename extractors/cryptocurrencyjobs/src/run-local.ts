@@ -7,17 +7,15 @@ import {
   rssRows,
 } from "../../feed-utils/src/index";
 
-const URL = "https://www.cryptocurrencyjobs.co/api/jobs";
+const URL = "https://cryptocurrencyjobs.co/index.xml";
 
 export async function runCryptocurrencyjobs(context: ExtractorRuntimeContext) {
   const options = commonOptions(context);
   if (options.cancelled()) return { success: true, jobs: [] };
   options.progress("cryptocurrencyjobs: fetching listings");
   try {
-    const payload = await fetchFeed(URL, "json");
-    const rows = Array.isArray(payload)
-      ? payload
-      : (payload?.jobs ?? payload?.results ?? payload?.data ?? []);
+    const payload = await fetchFeed(URL, "text");
+    const rows = rssRows(payload);
     const jobs = [];
     const seen = new Set<string>();
     for (const row of rows) {
