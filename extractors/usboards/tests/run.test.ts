@@ -79,7 +79,7 @@ describe("US board extractors", () => {
     expect(response.success).toBe(true);
     const [, init] = fetchMock.mock.calls[0] ?? [];
     const body = JSON.parse(String(init?.body));
-    expect(body.query.bool.must[0].query_string.query).toBe("data engineer");
+    expect(body.query.bool.must[0].multi_match.query).toBe("data engineer");
     expect(body.sm.query).toBe("data engineer");
   });
 });

@@ -145,7 +145,18 @@ async function fetchIbm(
     const body = {
       appId: "careers",
       scopes: ["careers2"],
-      query: { bool: { must: [{ query_string: { query } }] } },
+      query: {
+        bool: {
+          must: [
+            {
+              multi_match: {
+                query,
+                fields: ["title", "description"],
+              },
+            },
+          ],
+        },
+      },
       post_filter: ibmFilter(),
       size: 30,
       from,
