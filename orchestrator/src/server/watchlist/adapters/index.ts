@@ -3,11 +3,13 @@ import { bamboohrWatchlistAdapter } from "./bamboohr";
 import { greenhouseWatchlistAdapter } from "./greenhouse";
 import type { WatchlistCatalogSourceAdapter } from "./types";
 import { workdayWatchlistAdapter } from "./workday";
+import { careerOpsWatchlistAdapters } from "./careerops";
 
 const adapters = [
   workdayWatchlistAdapter,
   bamboohrWatchlistAdapter,
   greenhouseWatchlistAdapter,
+  ...careerOpsWatchlistAdapters,
 ] as const;
 
 const adaptersByType = new Map<

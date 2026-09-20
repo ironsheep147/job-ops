@@ -29,6 +29,17 @@ describe("extractor deployment config", () => {
     );
   });
 
+  it("ships the CareerOps US source packages in Docker runtime images", async () => {
+    const dockerfile = await readFile(resolve(process.cwd(), "../Dockerfile"), { encoding: "utf8" });
+    const composeFile = await readFile(resolve(process.cwd(), "../docker-compose.yml"), { encoding: "utf8" });
+    expect(dockerfile).toContain("COPY career-boards/careerops/package*.json ./career-boards/careerops/");
+    expect(dockerfile).toContain("COPY career-boards/careerops ./career-boards/careerops");
+    expect(dockerfile).toContain("COPY extractors/careerops-us/package*.json ./extractors/careerops-us/");
+    expect(dockerfile).toContain("COPY extractors/careerops-us ./extractors/careerops-us");
+    expect(composeFile).toContain("path: ./career-boards/careerops/src");
+    expect(composeFile).toContain("path: ./extractors/careerops-us");
+  });
+
   it("ships the Naukri extractor in Docker runtime images", async () => {
     const dockerfile = await readFile(resolve(process.cwd(), "../Dockerfile"), {
       encoding: "utf8",

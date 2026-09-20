@@ -395,7 +395,18 @@ export interface WatchlistCheckResponse {
   jobs: WatchlistCheckJobDelta[];
 }
 
-export type WatchedSourceType = "workday" | (string & {});
+export type WatchedSourceType =
+  | "workday"
+  | "bamboohr"
+  | "greenhouse"
+  | "ashby"
+  | "lever"
+  | "smartrecruiters"
+  | "icims"
+  | "workable"
+  | "teamtailor"
+  | "jobvite"
+  | (string & {});
 
 export interface WatchlistSource {
   id: string;

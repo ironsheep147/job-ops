@@ -22,7 +22,8 @@
       "@career-boards/workday": ["../career-boards/workday/src/index.ts"],
       "@career-boards/workday/*": ["../career-boards/workday/src/*"],
       "@career-boards/greenhouse": ["../career-boards/greenhouse/src/index.ts"],
-      "@career-boards/greenhouse/*": ["../career-boards/greenhouse/src/*"]
+      "@career-boards/greenhouse/*": ["../career-boards/greenhouse/src/*"],
+      "@career-boards/careerops": ["../career-boards/careerops/src/index.ts"]
     }
   },
   "include": ["src/**/*", "scripts/**/*", "../career-boards/**/*.ts"],

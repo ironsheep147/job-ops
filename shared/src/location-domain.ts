@@ -115,6 +115,8 @@ export interface LocationEvidenceInput {
   evidenceQuality?: LocationEvidenceQuality | null;
   sourceNotes?: readonly string[] | null;
   source?: string | null;
+  remoteScope?: "unrestricted" | "restricted" | "unspecified" | null;
+  eligibleCountryKeys?: readonly string[] | null;
 }
 
 export interface LocationEvidence {
@@ -130,6 +132,8 @@ export interface LocationEvidence {
   evidenceQuality?: LocationEvidenceQuality;
   sourceNotes?: readonly string[] | null;
   source?: string | null;
+  remoteScope?: "unrestricted" | "restricted" | "unspecified";
+  eligibleCountryKeys?: string[];
   [index: number]: unknown;
 }
 
@@ -554,6 +558,12 @@ export function normalizeLocationEvidence(
     sourceNotes:
       "sourceNotes" in evidence ? (evidence.sourceNotes ?? null) : null,
     source,
+    remoteScope:
+      evidence.remoteScope ??
+      (isRemote ? "unspecified" : undefined),
+    eligibleCountryKeys: evidence.eligibleCountryKeys
+      ? normalizeCountryKeys(evidence.eligibleCountryKeys)
+      : undefined,
   };
 }
 
@@ -735,6 +745,11 @@ export function matchLocationIntent(
   const allowRemoteWorldwide =
     normalizedIntent.workplaceTypes.includes("remote") &&
     normalizedIntent.geoScope !== "selected_only";
+  const remoteScope = normalizedEvidence.remoteScope ??
+    (normalizedEvidence.isRemote ? "unspecified" : null);
+  const eligibleCountryMatched = normalizedEvidence.eligibleCountryKeys?.some(
+    (country) => matchesRequestedCountry(country, selectedCountry),
+  ) ?? false;
 
   if (!selectedCountry) {
     return {
@@ -813,7 +828,14 @@ export function matchLocationIntent(
     }
   }
 
-  if (allowRemoteWorldwide && normalizedEvidence.isRemote) {
+  const remoteAllowed =
+    allowRemoteWorldwide &&
+    normalizedEvidence.isRemote &&
+    (normalizedIntent.geoScope === "remote_worldwide_prioritize_selected" ||
+      remoteScope !== "restricted" ||
+      eligibleCountryMatched);
+
+  if (remoteAllowed) {
     return {
       matched: true,
       matchedBy: "remote_worldwide",

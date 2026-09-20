@@ -73,6 +73,10 @@ export default defineConfig({
         __dirname,
         "../career-boards/greenhouse/src/index.ts",
       ),
+      "@career-boards/careerops": path.resolve(
+        __dirname,
+        "../career-boards/careerops/src/index.ts",
+      ),
     },
   },
   server: {
