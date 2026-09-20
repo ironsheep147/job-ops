@@ -558,9 +558,7 @@ export function normalizeLocationEvidence(
     sourceNotes:
       "sourceNotes" in evidence ? (evidence.sourceNotes ?? null) : null,
     source,
-    remoteScope:
-      evidence.remoteScope ??
-      (isRemote ? "unspecified" : undefined),
+    remoteScope: evidence.remoteScope ?? (isRemote ? "unspecified" : undefined),
     eligibleCountryKeys: evidence.eligibleCountryKeys
       ? normalizeCountryKeys(evidence.eligibleCountryKeys)
       : undefined,
@@ -745,11 +743,14 @@ export function matchLocationIntent(
   const allowRemoteWorldwide =
     normalizedIntent.workplaceTypes.includes("remote") &&
     normalizedIntent.geoScope !== "selected_only";
-  const remoteScope = normalizedEvidence.remoteScope ??
+  const remoteScope =
+    normalizedEvidence.remoteScope ??
     (normalizedEvidence.isRemote ? "unspecified" : null);
-  const eligibleCountryMatched = normalizedEvidence.eligibleCountryKeys?.some(
-    (country) => matchesRequestedCountry(country, selectedCountry),
-  ) ?? false;
+  const eligibleCountryMatched = selectedCountry
+    ? (normalizedEvidence.eligibleCountryKeys?.some((country) =>
+        matchesRequestedCountry(country, selectedCountry),
+      ) ?? false)
+    : false;
 
   if (!selectedCountry) {
     return {

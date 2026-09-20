@@ -156,7 +156,7 @@ function createAdapter(provider: CareerOpsProvider): WatchlistCatalogSourceAdapt
     hydrateSelectedSource(source) {
       return { ...source, sourceType: provider };
     },
-    normalizeCustomSelection(input) {
+    async normalizeCustomSelection(input) {
       const parsed = new URL(input.careersUrl);
       if (parsed.protocol !== "https:") throw new Error("Careers URL must use HTTPS");
       if (/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1$)/i.test(parsed.hostname)) {

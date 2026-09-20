@@ -30,14 +30,63 @@ describe("extractor deployment config", () => {
   });
 
   it("ships the CareerOps US source packages in Docker runtime images", async () => {
-    const dockerfile = await readFile(resolve(process.cwd(), "../Dockerfile"), { encoding: "utf8" });
-    const composeFile = await readFile(resolve(process.cwd(), "../docker-compose.yml"), { encoding: "utf8" });
-    expect(dockerfile).toContain("COPY career-boards/careerops/package*.json ./career-boards/careerops/");
-    expect(dockerfile).toContain("COPY career-boards/careerops ./career-boards/careerops");
-    expect(dockerfile).toContain("COPY extractors/careerops-us/package*.json ./extractors/careerops-us/");
-    expect(dockerfile).toContain("COPY extractors/careerops-us ./extractors/careerops-us");
+    const dockerfile = await readFile(resolve(process.cwd(), "../Dockerfile"), {
+      encoding: "utf8",
+    });
+    const composeFile = await readFile(
+      resolve(process.cwd(), "../docker-compose.yml"),
+      { encoding: "utf8" },
+    );
+    expect(dockerfile).toContain(
+      "COPY career-boards/careerops/package*.json ./career-boards/careerops/",
+    );
+    expect(dockerfile).toContain(
+      "COPY career-boards/careerops ./career-boards/careerops",
+    );
+    expect(dockerfile).toContain(
+      "COPY extractors/feed-utils/package*.json ./extractors/feed-utils/",
+    );
+    expect(dockerfile).toContain(
+      "COPY extractors/feed-utils ./extractors/feed-utils",
+    );
     expect(composeFile).toContain("path: ./career-boards/careerops/src");
-    expect(composeFile).toContain("path: ./extractors/careerops-us");
+    expect(composeFile).toContain("path: ./extractors/feed-utils/src");
+  });
+
+  it("ships each CareerOps source as an independently discoverable extractor", async () => {
+    const dockerfile = await readFile(resolve(process.cwd(), "../Dockerfile"), {
+      encoding: "utf8",
+    });
+    const composeFile = await readFile(
+      resolve(process.cwd(), "../docker-compose.yml"),
+      { encoding: "utf8" },
+    );
+    const sources = [
+      "builtin",
+      "themuse",
+      "hackernews",
+      "remoteok",
+      "remotive",
+      "weworkremotely",
+      "jobicy",
+      "himalayas",
+      "nodesk",
+      "fourdayweek",
+      "cryptocurrencyjobs",
+      "pythonorg",
+      "a16zspeedrun",
+      "agenticjobs",
+      "generalistworld",
+    ];
+    for (const source of sources) {
+      expect(dockerfile).toContain(
+        `COPY extractors/${source}/package*.json ./extractors/${source}/`,
+      );
+      expect(dockerfile).toContain(
+        `COPY extractors/${source} ./extractors/${source}`,
+      );
+      expect(composeFile).toContain(`path: ./extractors/${source}`);
+    }
   });
 
   it("ships the Naukri extractor in Docker runtime images", async () => {

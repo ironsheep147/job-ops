@@ -148,6 +148,81 @@ const HEALTH_PROBE_CONFIG_BY_SOURCE: Record<
       jobspyResultsWanted: "1",
     },
   },
+  builtin: {
+    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
+    selectedCountry: "united states",
+    settings: { jobspyResultsWanted: "1" },
+  },
+  themuse: {
+    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
+    selectedCountry: "united states",
+    settings: { jobspyResultsWanted: "1" },
+  },
+  hackernews: {
+    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
+    selectedCountry: "united states",
+    settings: { jobspyResultsWanted: "1" },
+  },
+  remoteok: {
+    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
+    selectedCountry: "united states",
+    settings: { jobspyResultsWanted: "1" },
+  },
+  remotive: {
+    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
+    selectedCountry: "united states",
+    settings: { jobspyResultsWanted: "1" },
+  },
+  weworkremotely: {
+    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
+    selectedCountry: "united states",
+    settings: { jobspyResultsWanted: "1" },
+  },
+  jobicy: {
+    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
+    selectedCountry: "united states",
+    settings: { jobspyResultsWanted: "1" },
+  },
+  himalayas: {
+    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
+    selectedCountry: "united states",
+    settings: { jobspyResultsWanted: "1" },
+  },
+  nodesk: {
+    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
+    selectedCountry: "united states",
+    settings: { jobspyResultsWanted: "1" },
+  },
+  fourdayweek: {
+    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
+    selectedCountry: "united states",
+    settings: { jobspyResultsWanted: "1" },
+  },
+  cryptocurrencyjobs: {
+    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
+    selectedCountry: "united states",
+    settings: { jobspyResultsWanted: "1" },
+  },
+  pythonorg: {
+    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
+    selectedCountry: "united states",
+    settings: { jobspyResultsWanted: "1" },
+  },
+  a16zspeedrun: {
+    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
+    selectedCountry: "united states",
+    settings: { jobspyResultsWanted: "1" },
+  },
+  agenticjobs: {
+    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
+    selectedCountry: "united states",
+    settings: { jobspyResultsWanted: "1" },
+  },
+  generalistworld: {
+    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
+    selectedCountry: "united states",
+    settings: { jobspyResultsWanted: "1" },
+  },
   manual: {
     searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
     selectedCountry: DEFAULT_HEALTH_SELECTED_COUNTRY,

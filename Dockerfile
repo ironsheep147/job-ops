@@ -96,7 +96,22 @@ COPY extractors/seek/package*.json ./extractors/seek/
 COPY extractors/fiveamsat/package*.json ./extractors/fiveamsat/
 COPY extractors/wazzuf/package*.json ./extractors/wazzuf/
 COPY extractors/freehire/package*.json ./extractors/freehire/
-COPY extractors/careerops-us/package*.json ./extractors/careerops-us/
+COPY extractors/feed-utils/package*.json ./extractors/feed-utils/
+COPY extractors/builtin/package*.json ./extractors/builtin/
+COPY extractors/themuse/package*.json ./extractors/themuse/
+COPY extractors/hackernews/package*.json ./extractors/hackernews/
+COPY extractors/remoteok/package*.json ./extractors/remoteok/
+COPY extractors/remotive/package*.json ./extractors/remotive/
+COPY extractors/weworkremotely/package*.json ./extractors/weworkremotely/
+COPY extractors/jobicy/package*.json ./extractors/jobicy/
+COPY extractors/himalayas/package*.json ./extractors/himalayas/
+COPY extractors/nodesk/package*.json ./extractors/nodesk/
+COPY extractors/fourdayweek/package*.json ./extractors/fourdayweek/
+COPY extractors/cryptocurrencyjobs/package*.json ./extractors/cryptocurrencyjobs/
+COPY extractors/pythonorg/package*.json ./extractors/pythonorg/
+COPY extractors/a16zspeedrun/package*.json ./extractors/a16zspeedrun/
+COPY extractors/agenticjobs/package*.json ./extractors/agenticjobs/
+COPY extractors/generalistworld/package*.json ./extractors/generalistworld/
 COPY extractors/browser-utils/package*.json ./extractors/browser-utils/
 
 # Install build-time Node dependencies on the native builder platform. The
@@ -129,7 +144,22 @@ COPY extractors/seek ./extractors/seek
 COPY extractors/fiveamsat ./extractors/fiveamsat
 COPY extractors/wazzuf ./extractors/wazzuf
 COPY extractors/freehire ./extractors/freehire
-COPY extractors/careerops-us ./extractors/careerops-us
+COPY extractors/feed-utils ./extractors/feed-utils
+COPY extractors/builtin ./extractors/builtin
+COPY extractors/themuse ./extractors/themuse
+COPY extractors/hackernews ./extractors/hackernews
+COPY extractors/remoteok ./extractors/remoteok
+COPY extractors/remotive ./extractors/remotive
+COPY extractors/weworkremotely ./extractors/weworkremotely
+COPY extractors/jobicy ./extractors/jobicy
+COPY extractors/himalayas ./extractors/himalayas
+COPY extractors/nodesk ./extractors/nodesk
+COPY extractors/fourdayweek ./extractors/fourdayweek
+COPY extractors/cryptocurrencyjobs ./extractors/cryptocurrencyjobs
+COPY extractors/pythonorg ./extractors/pythonorg
+COPY extractors/a16zspeedrun ./extractors/a16zspeedrun
+COPY extractors/agenticjobs ./extractors/agenticjobs
+COPY extractors/generalistworld ./extractors/generalistworld
 COPY extractors/browser-utils ./extractors/browser-utils
 
 # ============================================================================
@@ -179,7 +209,22 @@ COPY extractors/seek/package*.json ./extractors/seek/
 COPY extractors/fiveamsat/package*.json ./extractors/fiveamsat/
 COPY extractors/wazzuf/package*.json ./extractors/wazzuf/
 COPY extractors/freehire/package*.json ./extractors/freehire/
-COPY extractors/careerops-us/package*.json ./extractors/careerops-us/
+COPY extractors/feed-utils/package*.json ./extractors/feed-utils/
+COPY extractors/builtin/package*.json ./extractors/builtin/
+COPY extractors/themuse/package*.json ./extractors/themuse/
+COPY extractors/hackernews/package*.json ./extractors/hackernews/
+COPY extractors/remoteok/package*.json ./extractors/remoteok/
+COPY extractors/remotive/package*.json ./extractors/remotive/
+COPY extractors/weworkremotely/package*.json ./extractors/weworkremotely/
+COPY extractors/jobicy/package*.json ./extractors/jobicy/
+COPY extractors/himalayas/package*.json ./extractors/himalayas/
+COPY extractors/nodesk/package*.json ./extractors/nodesk/
+COPY extractors/fourdayweek/package*.json ./extractors/fourdayweek/
+COPY extractors/cryptocurrencyjobs/package*.json ./extractors/cryptocurrencyjobs/
+COPY extractors/pythonorg/package*.json ./extractors/pythonorg/
+COPY extractors/a16zspeedrun/package*.json ./extractors/a16zspeedrun/
+COPY extractors/agenticjobs/package*.json ./extractors/agenticjobs/
+COPY extractors/generalistworld/package*.json ./extractors/generalistworld/
 COPY extractors/browser-utils/package*.json ./extractors/browser-utils/
 
 # Install production Node dependencies only.
@@ -277,7 +322,22 @@ COPY extractors/seek ./extractors/seek
 COPY extractors/fiveamsat ./extractors/fiveamsat
 COPY extractors/wazzuf ./extractors/wazzuf
 COPY extractors/freehire ./extractors/freehire
-COPY extractors/careerops-us ./extractors/careerops-us
+COPY extractors/feed-utils ./extractors/feed-utils
+COPY extractors/builtin ./extractors/builtin
+COPY extractors/themuse ./extractors/themuse
+COPY extractors/hackernews ./extractors/hackernews
+COPY extractors/remoteok ./extractors/remoteok
+COPY extractors/remotive ./extractors/remotive
+COPY extractors/weworkremotely ./extractors/weworkremotely
+COPY extractors/jobicy ./extractors/jobicy
+COPY extractors/himalayas ./extractors/himalayas
+COPY extractors/nodesk ./extractors/nodesk
+COPY extractors/fourdayweek ./extractors/fourdayweek
+COPY extractors/cryptocurrencyjobs ./extractors/cryptocurrencyjobs
+COPY extractors/pythonorg ./extractors/pythonorg
+COPY extractors/a16zspeedrun ./extractors/a16zspeedrun
+COPY extractors/agenticjobs ./extractors/agenticjobs
+COPY extractors/generalistworld ./extractors/generalistworld
 COPY extractors/browser-utils ./extractors/browser-utils
 
 # Create runtime directories.
