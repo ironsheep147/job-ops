@@ -2,6 +2,7 @@ import type { CreateJobInput, JobLocationEvidence } from "@shared/types/jobs";
 
 type Source = "builtin" | "themuse" | "hackernews";
 type Workplace = "remote" | "hybrid" | "onsite";
+type Phase3Source = "remoteok" | "remotive" | "weworkremotely" | "jobicy" | "himalayas" | "nodesk" | "fourdayweek" | "cryptocurrencyjobs" | "pythonorg" | "a16zspeedrun" | "agenticjobs" | "generalistworld";
 
 export interface RunCareerOpsUsOptions {
   searchTerms?: string[];
@@ -123,12 +124,74 @@ async function hackerNews(terms: string[], maxJobs: number): Promise<CreateJobIn
   return out;
 }
 
+function xmlItems(xml: string): Array<{ title: string; url: string; description: string; location: string; postedAt?: string; employer: string }> {
+  return (xml.match(/<item\b[\s\S]*?<\/item>/gi) ?? []).flatMap((item) => {
+    const tag = (name: string) => plain(item.match(new RegExp(`<${name}(?:\\:[^>]*)?[^>]*>([\\s\\S]*?)</${name}(?:\\:[^>]*)?>`, "i"))?.[1]);
+    const title = tag("title");
+    const url = tag("link") || tag("guid");
+    if (!title || !url) return [];
+    const companyParts = title.split(":").map((part) => part.trim());
+    return [{ title: companyParts.length > 1 ? companyParts.slice(1).join(": ") : title, employer: companyParts.length > 1 ? companyParts[0] : tag("creator") || "Remote employer", url, description: tag("description") || tag("encoded"), location: tag("region") || tag("location") || tag("category"), postedAt: tag("pubDate") || tag("published") }];
+  });
+}
+
+function phase3Job(source: Phase3Source, row: any): CreateJobInput | null {
+  const title = String(row?.title ?? row?.position ?? row?.name ?? row?.jobTitle ?? "").trim();
+  const jobUrl = String(row?.url ?? row?.job_url ?? row?.link ?? row?.apply_url ?? "").trim();
+  if (!title || !/^https:\/\//i.test(jobUrl)) return null;
+  const location = String(row?.location ?? row?.candidate_required_location ?? row?.locations ?? row?.city ?? row?.country ?? (row?.remote ? "Remote" : "")).trim();
+  const description = plain(row?.description ?? row?.contents ?? row?.descriptionPlain ?? row?.excerpt ?? "");
+  const employer = String(row?.company_name ?? row?.company ?? row?.employer ?? row?.organization ?? "Remote employer").trim();
+  const remote = Boolean(row?.is_remote ?? row?.remote ?? /remote|worldwide|anywhere/i.test(location));
+  return { source, sourceJobId: String(row?.id ?? row?.slug ?? jobUrl), title, employer, jobUrl, applicationLink: String(row?.apply_url ?? row?.applyUrl ?? jobUrl), location, jobDescription: description || undefined, datePosted: String(row?.publication_date ?? row?.published_at ?? row?.publishedAt ?? row?.date ?? "") || undefined, locationEvidence: remoteEvidence(location, source, remote), isRemote: remote };
+}
+
+const PHASE3_ENDPOINTS: Record<Phase3Source, { url: string; kind: "json" | "text" }> = {
+  remoteok: { url: "https://remoteok.com/api", kind: "json" },
+  remotive: { url: "https://remotive.com/api/remote-jobs", kind: "json" },
+  weworkremotely: { url: "https://weworkremotely.com/remote-jobs.rss", kind: "text" },
+  jobicy: { url: "https://jobicy.com/api/v2/remote-jobs?count=50", kind: "json" },
+  himalayas: { url: "https://himalayas.app/jobs/api?limit=50", kind: "json" },
+  nodesk: { url: "https://nodesk.co/remote-jobs/index.xml", kind: "text" },
+  fourdayweek: { url: "https://4dayweek.io/api/jobs?page=1", kind: "json" },
+  cryptocurrencyjobs: { url: "https://www.cryptocurrencyjobs.co/api/jobs", kind: "json" },
+  pythonorg: { url: "https://www.python.org/jobs/feed/rss/", kind: "text" },
+  a16zspeedrun: { url: "https://speedrun-talent-network.com/api/v1/jobs", kind: "json" },
+  agenticjobs: { url: "https://agentic-engineering-jobs.com/api/v1/jobs", kind: "json" },
+  generalistworld: { url: "https://generalist.world/api/jobs", kind: "json" },
+};
+
+async function phase3(source: Phase3Source, terms: string[], maxJobs: number): Promise<CreateJobInput[]> {
+  const endpoint = PHASE3_ENDPOINTS[source];
+  const payload = await get(endpoint.url, endpoint.kind);
+  const candidateRows = endpoint.kind === "text"
+    ? xmlItems(payload).map((row) => ({ ...row, id: row.url }))
+    : (Array.isArray(payload) ? payload : payload?.jobs ?? payload?.results ?? payload?.data ?? []);
+  const rows = Array.isArray(candidateRows) ? candidateRows : [];
+  const jobs: CreateJobInput[] = [];
+  const seen = new Set<string>();
+  for (const row of rows) {
+    const job = phase3Job(source, row);
+    if (!job || seen.has(job.jobUrl) || !matches(job, terms)) continue;
+    seen.add(job.jobUrl);
+    jobs.push(job);
+    if (jobs.length >= maxJobs) break;
+  }
+  return jobs;
+}
+
 export async function runCareerOpsUs(options: RunCareerOpsUsOptions = {}): Promise<RunCareerOpsUsResult> {
   const maxJobs = Math.max(1, Number.isFinite(options.maxJobs) ? Math.floor(options.maxJobs!) : 50);
   const terms = options.searchTerms ?? [];
   const jobs: CreateJobInput[] = [];
   const sourceErrors: string[] = [];
-  for (const [source, fn] of [["builtin", () => builtIn(terms, maxJobs, options.workplaceTypes)], ["themuse", () => theMuse(terms, maxJobs)], ["hackernews", () => hackerNews(terms, maxJobs)]] as const) {
+  const tasks: Array<[string, () => Promise<CreateJobInput[]>]> = [
+    ["builtin", () => builtIn(terms, maxJobs, options.workplaceTypes)],
+    ["themuse", () => theMuse(terms, maxJobs)],
+    ["hackernews", () => hackerNews(terms, maxJobs)],
+    ...Object.keys(PHASE3_ENDPOINTS).map((source) => [source, () => phase3(source as Phase3Source, terms, maxJobs)] as [string, () => Promise<CreateJobInput[]>]),
+  ];
+  for (const [source, fn] of tasks) {
     if (options.shouldCancel?.()) break;
     options.onProgress?.(`CareerOps ${source}: fetching US listings`);
     try { jobs.push(...await fn()); } catch (error) { sourceErrors.push(`${source}: ${error instanceof Error ? error.message : "upstream failure"}`); }

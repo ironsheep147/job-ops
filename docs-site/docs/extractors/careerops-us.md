@@ -7,7 +7,7 @@ sidebar_position: 12
 
 ## What it is
 
-CareerOps US Sources adds Built In, The Muse, and Hacker News “Who Is Hiring?” to pipeline discovery. Employer ATS boards from CareerOps are available as Watchlist source types.
+CareerOps US Sources adds Built In, The Muse, Hacker News “Who Is Hiring?”, and remote/niche feeds to pipeline discovery. Employer ATS boards from CareerOps are available as Watchlist source types.
 
 ## Why it exists
 
@@ -17,8 +17,8 @@ These feeds add US startup, technology, and employer coverage without credential
 
 1. Set the search country to **United States**.
 2. Choose the existing location scope that fits your policy. **Selected plus remote worldwide** is the balanced option.
-3. Select Built In, The Muse, or Hacker News in the pipeline source list.
-4. For employer boards, open Watchlist and choose an ATS type. Supported types include Ashby, Lever, SmartRecruiters, iCIMS, Workable, Teamtailor, Jobvite, Eightfold AI, Oracle Recruiting Cloud, Phenom, Avature, Radancy, SAP SuccessFactors, JibeApply, Pinpoint, Recruitee, Rippling, Comeet, Collage HR, and Cornerstone.
+3. Select Built In, The Muse, Hacker News, or a Phase 3 feed in the pipeline source list: Remote OK, Remotive, We Work Remotely, Jobicy, Himalayas, NoDesk, 4 Day Week, Cryptocurrency Jobs, Python.org Jobs, a16z Speedrun, Agentic Engineering Jobs, or Generalist World.
+4. For employer boards, open Watchlist and choose an ATS type. Supported types include Ashby, Lever, SmartRecruiters, iCIMS, Workable, Teamtailor, and Jobvite.
 
 Sources are public and bounded: Built In scans up to three pages per search term, The Muse scans up to 100 API pages, Hacker News scans the current monthly hiring thread, and Watchlist sources return at most 40 jobs per board.
 
