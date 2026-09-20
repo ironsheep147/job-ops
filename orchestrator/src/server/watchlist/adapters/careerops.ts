@@ -16,6 +16,19 @@ const PROVIDERS: CareerOpsProvider[] = [
   "workable",
   "teamtailor",
   "jobvite",
+  "eightfold",
+  "oraclecloud",
+  "phenom",
+  "avature",
+  "radancy",
+  "successfactors",
+  "jibeapply",
+  "pinpoint",
+  "recruitee",
+  "rippling",
+  "comeet",
+  "collage",
+  "cornerstone",
 ];
 
 const LABELS: Record<CareerOpsProvider, string> = {
@@ -26,6 +39,19 @@ const LABELS: Record<CareerOpsProvider, string> = {
   workable: "Workable",
   teamtailor: "Teamtailor",
   jobvite: "Jobvite",
+  eightfold: "Eightfold AI",
+  oraclecloud: "Oracle Recruiting Cloud",
+  phenom: "Phenom People",
+  avature: "Avature",
+  radancy: "Radancy",
+  successfactors: "SAP SuccessFactors",
+  jibeapply: "JibeApply",
+  pinpoint: "Pinpoint",
+  recruitee: "Recruitee",
+  rippling: "Rippling",
+  comeet: "Comeet",
+  collage: "Collage HR",
+  cornerstone: "Cornerstone OnDemand",
 };
 
 const URL_HINTS: Record<CareerOpsProvider, string> = {
@@ -36,6 +62,19 @@ const URL_HINTS: Record<CareerOpsProvider, string> = {
   workable: "https://apply.workable.com/company",
   teamtailor: "https://company.teamtailor.com",
   jobvite: "https://jobs.jobvite.com/company",
+  eightfold: "https://company.eightfold.ai",
+  oraclecloud: "https://company.fa.us2.oraclecloud.com",
+  phenom: "https://careers.company.com",
+  avature: "https://careers.company.com",
+  radancy: "https://careers.company.com",
+  successfactors: "https://jobs.company.com",
+  jibeapply: "https://jobs.company.com",
+  pinpoint: "https://company.pinpointhq.com",
+  recruitee: "https://company.recruitee.com",
+  rippling: "https://ats.rippling.com/company/jobs",
+  comeet: "https://api.comeet.co",
+  collage: "https://api.collage.co/v1/positions/site",
+  cornerstone: "https://company.csod.com/ux/ats/careersite",
 };
 
 const sourceSchema = z.object({
@@ -62,7 +101,25 @@ function canonicalUrl(provider: CareerOpsProvider, value: string): boolean {
               ? host === "apply.workable.com"
               : provider === "teamtailor"
                 ? host.endsWith(".teamtailor.com")
-                : host === "jobs.jobvite.com" || host === "app.jobvite.com";
+                : provider === "jobvite"
+                  ? host === "jobs.jobvite.com" || host === "app.jobvite.com"
+                  : provider === "eightfold"
+                    ? host.endsWith(".eightfold.ai")
+                    : provider === "oraclecloud"
+                      ? host.endsWith(".oraclecloud.com")
+                      : provider === "pinpoint"
+                        ? host.endsWith(".pinpointhq.com")
+                        : provider === "recruitee"
+                          ? host.endsWith(".recruitee.com")
+                          : provider === "rippling"
+                            ? host === "ats.rippling.com"
+                            : provider === "comeet"
+                              ? host.endsWith("comeet.co")
+                              : provider === "collage"
+                                ? host === "api.collage.co"
+                                : provider === "cornerstone"
+                                  ? host.endsWith(".csod.com")
+                                  : ["phenom", "avature", "radancy", "successfactors", "jibeapply"].includes(provider);
   } catch {
     return false;
   }
@@ -102,6 +159,9 @@ function createAdapter(provider: CareerOpsProvider): WatchlistCatalogSourceAdapt
     normalizeCustomSelection(input) {
       const parsed = new URL(input.careersUrl);
       if (parsed.protocol !== "https:") throw new Error("Careers URL must use HTTPS");
+      if (/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1$)/i.test(parsed.hostname)) {
+        throw new Error("Private or local careers hosts are not allowed");
+      }
       const careersUrl = parsed.href.replace(/\/$/, "");
       if (!canonicalUrl(provider, careersUrl)) throw new Error(`Use a canonical ${LABELS[provider]} careers URL`);
       return {

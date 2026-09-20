@@ -11,6 +11,19 @@ describe("CareerOps Watchlist adapters", () => {
       "workable",
       "teamtailor",
       "jobvite",
+      "eightfold",
+      "oraclecloud",
+      "phenom",
+      "avature",
+      "radancy",
+      "successfactors",
+      "jibeapply",
+      "pinpoint",
+      "recruitee",
+      "rippling",
+      "comeet",
+      "collage",
+      "cornerstone",
     ]);
   });
 

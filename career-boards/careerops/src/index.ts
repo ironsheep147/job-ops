@@ -7,7 +7,20 @@ export type CareerOpsProvider =
   | "icims"
   | "workable"
   | "teamtailor"
-  | "jobvite";
+  | "jobvite"
+  | "eightfold"
+  | "oraclecloud"
+  | "phenom"
+  | "avature"
+  | "radancy"
+  | "successfactors"
+  | "jibeapply"
+  | "pinpoint"
+  | "recruitee"
+  | "rippling"
+  | "comeet"
+  | "collage"
+  | "cornerstone";
 
 export interface CareerOpsListing {
   sourceJobId: string;
@@ -36,6 +49,19 @@ const HOSTS: Record<CareerOpsProvider, string[]> = {
   workable: ["apply.workable.com"],
   teamtailor: ["teamtailor.com"],
   jobvite: ["jobs.jobvite.com", "app.jobvite.com"],
+  eightfold: ["eightfold.ai"],
+  oraclecloud: ["oraclecloud.com"],
+  phenom: [],
+  avature: [],
+  radancy: [],
+  successfactors: [],
+  jibeapply: [],
+  pinpoint: ["pinpointhq.com"],
+  recruitee: ["recruitee.com"],
+  rippling: ["ats.rippling.com", "api.rippling.com"],
+  comeet: ["comeet.co", "api.comeet.co"],
+  collage: ["api.collage.co"],
+  cornerstone: ["csod.com"],
 };
 
 function hostAllowed(provider: CareerOpsProvider, hostname: string): boolean {
@@ -268,6 +294,53 @@ async function fetchJobvite(url: string, employer: string, signal?: AbortSignal)
   });
 }
 
+function rowsFromPayload(payload: any): any[] {
+  if (Array.isArray(payload)) return payload;
+  for (const key of ["jobs", "postings", "offers", "results", "content", "data", "items"]) {
+    if (Array.isArray(payload?.[key])) return payload[key];
+  }
+  return [];
+}
+
+function mapGenericRows(provider: CareerOpsProvider, rows: any[], employer: string): CareerOpsListing[] {
+  return rows.slice(0, 40).flatMap((row) => {
+    const title = text(row?.title ?? row?.name ?? row?.text ?? row?.jobTitle);
+    const jobUrl = safeUrl(provider, row?.url ?? row?.jobUrl ?? row?.applyUrl ?? row?.hostedUrl, true);
+    if (!title || !jobUrl) return [];
+    const location = text(row?.location ?? row?.city ?? row?.locations ?? row?.address);
+    return [listing({
+      sourceJobId: String(row?.id ?? row?.requisitionId ?? row?.slug ?? jobUrl),
+      title,
+      employer: text(row?.company ?? row?.companyName) || employer,
+      jobUrl,
+      applicationLink: safeUrl(provider, row?.applyUrl ?? row?.applicationUrl, true) ?? jobUrl,
+      location,
+      description: text(row?.description ?? row?.descriptionPlain ?? row?.jobDescription),
+      postedAt: row?.publishedAt ?? row?.datePosted ?? row?.createdAt,
+    })];
+  });
+}
+
+async function fetchEnterprise(provider: CareerOpsProvider, url: string, employer: string, signal?: AbortSignal): Promise<CareerOpsListing[]> {
+  const parsed = new URL(url);
+  let endpoint = url;
+  const slug = parsed.pathname.split("/").filter(Boolean)[0];
+  if (provider === "eightfold") endpoint = `${parsed.origin}/api/ats/v1/jobs`;
+  if (provider === "pinpoint") endpoint = `${parsed.origin}/postings.json`;
+  if (provider === "recruitee") endpoint = `${parsed.origin}/api/offers`;
+  if (provider === "rippling" && parsed.hostname === "ats.rippling.com" && slug) endpoint = `https://api.rippling.com/platform/api/ats/v1/board/${encodeURIComponent(slug)}/jobs`;
+  if (provider === "oraclecloud") endpoint = `${parsed.origin}/hcmRestApi/resources/latest/recruitingCEJobRequisitions`;
+  if (provider === "phenom") endpoint = `${parsed.origin}/widgets`;
+  if (provider === "avature") endpoint = `${parsed.origin}/careers/SearchJobs?jobOffset=0`;
+  if (provider === "radancy") endpoint = `${parsed.origin}/en/search-jobs?p=1`;
+  if (provider === "successfactors") endpoint = `${parsed.origin}/tile-search-results/?startrow=0`;
+  if (provider === "jibeapply") endpoint = `${parsed.origin}/api/jobs`;
+  if (provider === "cornerstone") endpoint = `${parsed.origin}/api/jobs`;
+  const response = await request(endpoint, provider === "avature" || provider === "radancy" || provider === "successfactors" ? "text" : "json", signal);
+  if (typeof response === "string") return parseCards(response, provider, employer, parsed.origin);
+  return mapGenericRows(provider, rowsFromPayload(response), employer);
+}
+
 export async function fetchCareerOpsListings(provider: CareerOpsProvider, careersUrl: string, employer: string, signal?: AbortSignal): Promise<CareerOpsListing[]> {
   switch (provider) {
     case "ashby": return fetchAshby(careersUrl, employer, signal);
@@ -277,6 +350,20 @@ export async function fetchCareerOpsListings(provider: CareerOpsProvider, career
     case "workable": return fetchWorkable(careersUrl, employer, signal);
     case "teamtailor": return fetchTeamtailor(careersUrl, employer, signal);
     case "jobvite": return fetchJobvite(careersUrl, employer, signal);
+    case "eightfold":
+    case "oraclecloud":
+    case "phenom":
+    case "avature":
+    case "radancy":
+    case "successfactors":
+    case "jibeapply":
+    case "pinpoint":
+    case "recruitee":
+    case "rippling":
+    case "comeet":
+    case "collage":
+    case "cornerstone":
+      return fetchEnterprise(provider, careersUrl, employer, signal);
   }
 }
 

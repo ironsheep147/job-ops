@@ -406,6 +406,19 @@ export type WatchedSourceType =
   | "workable"
   | "teamtailor"
   | "jobvite"
+  | "eightfold"
+  | "oraclecloud"
+  | "phenom"
+  | "avature"
+  | "radancy"
+  | "successfactors"
+  | "jibeapply"
+  | "pinpoint"
+  | "recruitee"
+  | "rippling"
+  | "comeet"
+  | "collage"
+  | "cornerstone"
   | (string & {});
 
 export interface WatchlistSource {
