@@ -350,16 +350,21 @@ export async function runPipeline(
 
       ensureNotCancelled(scopeKey);
       await persistResultSummary({ stage: "discovery" });
-      let { discoveredJobs, sourceErrors, pendingChallenges } =
-        await discoverJobsStep({
-          mergedConfig,
-          watchlistSelectedSourceIds: mergedConfig.watchlistSelectedSourceIds,
-          shouldCancel: () =>
-            getPipelineState(scopeKey).cancelRequestedAt !== null,
-        });
+      let {
+        discoveredJobs,
+        sourceErrors,
+        pendingChallenges,
+        sourceResults = [],
+      } = await discoverJobsStep({
+        mergedConfig,
+        watchlistSelectedSourceIds: mergedConfig.watchlistSelectedSourceIds,
+        shouldCancel: () =>
+          getPipelineState(scopeKey).cancelRequestedAt !== null,
+      });
       await persistResultSummary({
         stage: "discovery",
         sourceErrors,
+        sourceResults,
       });
 
       // ---------- Challenge pause/resume ----------
@@ -410,6 +415,17 @@ export async function runPipeline(
         discoveredJobs = [...discoveredJobs, ...retryResult.discoveredJobs];
         sourceErrors = [...sourceErrors, ...retryResult.sourceErrors];
         pendingChallenges = retryResult.pendingChallenges;
+        const retrySourceResults = retryResult.sourceResults ?? [];
+        sourceResults = [
+          ...sourceResults.filter(
+            (sourceResult) =>
+              !retrySourceResults.some(
+                (retrySourceResult) =>
+                  retrySourceResult.source === sourceResult.source,
+              ),
+          ),
+          ...retrySourceResults,
+        ];
 
         // If the retry itself hits challenges again (e.g. no reusable cookie was
         // persisted, or the cookie was rejected), keep partial results only when
@@ -434,6 +450,11 @@ export async function runPipeline(
         }
 
         progressHelpers.crawlingComplete(discoveredJobs.length);
+        await persistResultSummary({
+          stage: "discovery",
+          sourceErrors,
+          sourceResults,
+        });
       }
 
       ensureNotCancelled(scopeKey);

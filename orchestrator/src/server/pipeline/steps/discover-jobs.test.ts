@@ -116,9 +116,95 @@ describe("discoverJobsStep", () => {
     expect(result.sourceErrors).toEqual([
       "UK Visa Jobs: login failed (sources: ukvisajobs)",
     ]);
+    expect(result.sourceResults).toEqual([
+      expect.objectContaining({
+        source: "jobspy",
+        requestedSources: ["indeed", "linkedin"],
+        status: "completed",
+        fetchedCount: 1,
+        filteredByLocationCount: 0,
+        filteredByBlockedCompanyCount: 0,
+        retainedCount: 1,
+        errors: [],
+      }),
+      expect.objectContaining({
+        source: "ukvisajobs",
+        requestedSources: ["ukvisajobs"],
+        status: "failed",
+        fetchedCount: 0,
+        filteredByLocationCount: 0,
+        filteredByBlockedCompanyCount: 0,
+        retainedCount: 0,
+        errors: ["UK Visa Jobs: login failed (sources: ukvisajobs)"],
+      }),
+    ]);
     expect(jobspyManifest.run).toHaveBeenCalledWith(
       expect.objectContaining({ selectedSources: ["indeed", "linkedin"] }),
     );
+  });
+
+  it("reports jobs removed by exact location filtering per source", async () => {
+    const settingsRepo = await import("@server/repositories/settings");
+    const registryModule = await import("@server/extractors/registry");
+    const remoteManifest = {
+      id: "remoteok",
+      displayName: "Remote OK",
+      providesSources: ["remoteok"],
+      run: vi.fn().mockResolvedValue({
+        success: true,
+        jobs: [
+          {
+            source: "remoteok",
+            title: "Remote Engineer",
+            employer: "ACME",
+            jobUrl: "https://example.com/remote-job",
+            location: "Remote",
+            isRemote: true,
+          },
+        ],
+      }),
+    };
+
+    vi.mocked(settingsRepo.getAllSettings).mockResolvedValue({
+      searchTerms: JSON.stringify(["engineer"]),
+      jobspyCountryIndeed: "united states",
+      searchCities: "Fontana",
+      workplaceTypes: JSON.stringify(["remote", "onsite"]),
+      locationSearchScope: "selected_only",
+      locationMatchStrictness: "exact_only",
+    } as any);
+    vi.mocked(registryModule.getExtractorRegistry).mockResolvedValue({
+      manifests: new Map([["remoteok", remoteManifest as any]]),
+      manifestBySource: new Map([["remoteok", remoteManifest as any]]),
+      availableSources: ["remoteok"],
+    } as any);
+
+    const result = await discoverJobsStep({
+      mergedConfig: {
+        ...baseConfig,
+        sources: ["remoteok"],
+        locationIntent: {
+          selectedCountry: "united states",
+          country: "united states",
+          cityLocations: ["Fontana"],
+          workplaceTypes: ["remote", "onsite"],
+          geoScope: "selected_only",
+          searchScope: "selected_only",
+          matchStrictness: "exact_only",
+        },
+      },
+    });
+
+    expect(result.discoveredJobs).toEqual([]);
+    expect(result.sourceResults).toEqual([
+      expect.objectContaining({
+        source: "remoteok",
+        fetchedCount: 1,
+        filteredByLocationCount: 1,
+        filteredByBlockedCompanyCount: 0,
+        retainedCount: 0,
+      }),
+    ]);
   });
 
   it("times out a hung extractor and continues with other sources", async () => {

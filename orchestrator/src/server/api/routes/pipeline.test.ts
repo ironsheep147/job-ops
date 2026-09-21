@@ -577,6 +577,18 @@ describe.sequential("Pipeline API routes", () => {
         jobsScored: 5,
         jobsSelected: 2,
         sourceErrors: ["indeed: upstream timeout"],
+        sourceResults: [
+          {
+            source: "jobspy",
+            requestedSources: ["linkedin", "indeed"],
+            status: "partial",
+            fetchedCount: 3,
+            filteredByLocationCount: 1,
+            filteredByBlockedCompanyCount: 1,
+            retainedCount: 1,
+            errors: ["indeed: upstream timeout"],
+          },
+        ],
       },
     });
 
@@ -639,6 +651,13 @@ describe.sequential("Pipeline API routes", () => {
         resultSummary: expect.objectContaining({
           stage: "processing",
           sourceErrors: ["indeed: upstream timeout"],
+          sourceResults: [
+            expect.objectContaining({
+              source: "jobspy",
+              fetchedCount: 3,
+              retainedCount: 1,
+            }),
+          ],
         }),
       }),
     );

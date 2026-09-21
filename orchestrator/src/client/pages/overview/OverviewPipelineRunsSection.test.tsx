@@ -124,6 +124,18 @@ describe("OverviewPipelineRunsSection", () => {
           jobsScored: 4,
           jobsSelected: 2,
           sourceErrors: ["linkedin: temporary rate limit"],
+          sourceResults: [
+            {
+              source: "jobspy",
+              requestedSources: ["linkedin", "indeed"],
+              status: "partial",
+              fetchedCount: 8,
+              filteredByLocationCount: 6,
+              filteredByBlockedCompanyCount: 1,
+              retainedCount: 1,
+              errors: ["linkedin: temporary rate limit"],
+            },
+          ],
         },
       },
       inferredMetrics: {
@@ -154,12 +166,17 @@ describe("OverviewPipelineRunsSection", () => {
     expect(screen.getByText("Requested run")).toBeInTheDocument();
     expect(screen.getByText("Effective settings")).toBeInTheDocument();
     expect(screen.getByText("Saved execution summary")).toBeInTheDocument();
+    expect(screen.getByText("Source results")).toBeInTheDocument();
+    expect(screen.getByText("JobSpy")).toBeInTheDocument();
+    expect(screen.getAllByText(/LinkedIn, Indeed/).length).toBeGreaterThan(0);
+    expect(screen.getByText("Fetched")).toBeInTheDocument();
+    expect(screen.getByText("Filtered by location")).toBeInTheDocument();
     expect(screen.getByText("What changed")).toBeInTheDocument();
     expect(screen.getByText("Inferred from timestamps")).toBeInTheDocument();
     expect(screen.getByText("Scoring failed")).toBeInTheDocument();
     expect(
-      screen.getByText("linkedin: temporary rate limit"),
-    ).toBeInTheDocument();
+      screen.getAllByText("linkedin: temporary rate limit").length,
+    ).toBeGreaterThan(0);
   });
 
   it("shows live progress when a run is active", async () => {

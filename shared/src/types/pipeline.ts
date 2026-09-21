@@ -192,11 +192,25 @@ export interface PipelineRunEffectiveConfig {
   resumeProjects: PipelineRunResumeProjectsSnapshot;
 }
 
+export type PipelineRunSourceResultStatus = "completed" | "partial" | "failed";
+
+export interface PipelineRunSourceResult {
+  source: string;
+  requestedSources: string[];
+  status: PipelineRunSourceResultStatus;
+  fetchedCount: number;
+  filteredByLocationCount: number;
+  filteredByBlockedCompanyCount: number;
+  retainedCount: number;
+  errors: string[];
+}
+
 export interface PipelineRunResultSummary {
   stage: PipelineRunExecutionStage;
   jobsScored: number | null;
   jobsSelected: number | null;
   sourceErrors: string[];
+  sourceResults?: PipelineRunSourceResult[];
 }
 
 export interface PipelineRunSavedDetails {

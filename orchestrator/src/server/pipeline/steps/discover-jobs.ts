@@ -25,6 +25,7 @@ import {
   type CreateJobInput,
   deriveExtractorLimits,
   type PipelineConfig,
+  type PipelineRunSourceResult,
 } from "@shared/types";
 import {
   type CrawlSource,
@@ -42,10 +43,12 @@ type DiscoveryTaskResult = {
   sourceErrors: string[];
   challenge?: PendingChallenge;
   fatal?: boolean;
+  sourceResult: Pick<PipelineRunSourceResult, "source" | "requestedSources">;
 };
 
 type DiscoverySourceTask = {
   source: CrawlSource;
+  requestedSources: string[];
   termsTotal?: number;
   detail: string;
   run: () => Promise<DiscoveryTaskResult>;
@@ -159,6 +162,7 @@ export async function discoverJobsStep(args: {
   discoveredJobs: CreateJobInput[];
   sourceErrors: string[];
   pendingChallenges: PendingChallenge[];
+  sourceResults: PipelineRunSourceResult[];
 }> {
   logger.info("Running discovery step");
 
@@ -305,6 +309,7 @@ export async function discoverJobsStep(args: {
 
     sourceTasks.push({
       source: manifest.id,
+      requestedSources: [...grouped.sources],
       termsTotal: grouped.termsTotal,
       detail:
         grouped.sources.length > 1
@@ -383,6 +388,10 @@ export async function discoverJobsStep(args: {
             sourceErrors: [
               `${manifest.displayName || manifest.id}: ${result.error ?? "unknown error"} (sources: ${grouped.sources.join(",")})`,
             ],
+            sourceResult: {
+              source: manifest.id,
+              requestedSources: [...grouped.sources],
+            },
             fatal: true,
             challenge: result.challengeRequired
               ? {
@@ -398,6 +407,10 @@ export async function discoverJobsStep(args: {
         return {
           discoveredJobs: result.jobs,
           sourceErrors: result.sourceErrors ?? [],
+          sourceResult: {
+            source: manifest.id,
+            requestedSources: [...grouped.sources],
+          },
         };
       },
     });
@@ -485,10 +498,20 @@ export async function discoverJobsStep(args: {
   }
 
   if (args.shouldCancel?.()) {
-    return { discoveredJobs, sourceErrors, pendingChallenges: [] };
+    return {
+      discoveredJobs,
+      sourceErrors,
+      pendingChallenges: [],
+      sourceResults: [],
+    };
   }
   if (totalSources === 0) {
-    return { discoveredJobs, sourceErrors, pendingChallenges: [] };
+    return {
+      discoveredJobs,
+      sourceErrors,
+      pendingChallenges: [],
+      sourceResults: [],
+    };
   }
 
   return withHostedUsageReservation(
@@ -498,6 +521,7 @@ export async function discoverJobsStep(args: {
     },
     async () => {
       const settledJobs: CreateJobInput[] = [...(args.fanoutSeedJobs ?? [])];
+      const sourceExecutionResults: PipelineRunSourceResult[] = [];
       const liveBlockedKeywordsLowerCase = parseBlockedCompanyKeywords(
         settings.blockedCompanyKeywords,
       ).map((value) => value.toLowerCase());
@@ -572,6 +596,10 @@ export async function discoverJobsStep(args: {
               sourceErrors: [
                 `${sourceTask.source}: ${error instanceof Error ? error.message : "unknown error"}`,
               ],
+              sourceResult: {
+                source: sourceTask.source,
+                requestedSources: [...sourceTask.requestedSources],
+              },
               fatal: true,
             };
           }
@@ -582,12 +610,25 @@ export async function discoverJobsStep(args: {
       // This way the user sees every challenged site at once and can solve them
       // in a single batch, rather than solve-one → re-run → hit-next → solve-again.
       const pendingChallenges: PendingChallenge[] = [];
-      for (const sourceResult of sourceResults) {
-        discoveredJobs.push(...sourceResult.discoveredJobs);
-        sourceErrors.push(...sourceResult.sourceErrors);
-        if (sourceResult.challenge) {
-          pendingChallenges.push(sourceResult.challenge);
-        } else if (!sourceResult.fatal) {
+      for (const taskResult of sourceResults) {
+        discoveredJobs.push(...taskResult.discoveredJobs);
+        sourceErrors.push(...taskResult.sourceErrors);
+        sourceExecutionResults.push({
+          ...taskResult.sourceResult,
+          status: taskResult.fatal
+            ? "failed"
+            : taskResult.sourceErrors.length > 0
+              ? "partial"
+              : "completed",
+          fetchedCount: taskResult.discoveredJobs.length,
+          filteredByLocationCount: 0,
+          filteredByBlockedCompanyCount: 0,
+          retainedCount: 0,
+          errors: [...taskResult.sourceErrors],
+        });
+        if (taskResult.challenge) {
+          pendingChallenges.push(taskResult.challenge);
+        } else if (!taskResult.fatal) {
           successfulSearchUnits += 1;
         }
       }
@@ -615,6 +656,24 @@ export async function discoverJobsStep(args: {
         progressHelpers.settleFanoutTask("watchlist", "complete");
         updateFanoutResults();
         sourceErrors.push(...watchlistResult.sourceErrors);
+        sourceExecutionResults.push({
+          source: "watchlist",
+          requestedSources: watchlistSelectedSources.map(
+            (source) => source.label,
+          ),
+          status:
+            watchlistResult.failedSourceCount ===
+            watchlistResult.selectedSourceCount
+              ? "failed"
+              : watchlistResult.sourceErrors.length > 0
+                ? "partial"
+                : "completed",
+          fetchedCount: watchlistResult.discoveredJobs.length,
+          filteredByLocationCount: 0,
+          filteredByBlockedCompanyCount: 0,
+          retainedCount: 0,
+          errors: [...watchlistResult.sourceErrors],
+        });
         if (
           watchlistResult.failedSourceCount <
           watchlistResult.selectedSourceCount
@@ -632,6 +691,16 @@ export async function discoverJobsStep(args: {
         }
       }
 
+      const sourceResultBySource = new Map<string, PipelineRunSourceResult>();
+      for (const sourceResult of sourceExecutionResults) {
+        sourceResultBySource.set(sourceResult.source, sourceResult);
+        for (const requestedSource of sourceResult.requestedSources) {
+          sourceResultBySource.set(requestedSource, sourceResult);
+        }
+      }
+      const getSourceResultForJob = (source: string) =>
+        sourceResultBySource.get(source) ??
+        sourceResultBySource.get("watchlist");
       const locationFilterReasonCounts: Record<string, number> = {};
       const locationFilteredJobs = discoveredJobs.filter((job) => {
         const evidence =
@@ -650,6 +719,8 @@ export async function discoverJobsStep(args: {
         if (match.matched) {
           return true;
         }
+        const sourceResult = getSourceResultForJob(job.source);
+        if (sourceResult) sourceResult.filteredByLocationCount += 1;
         const reasonCode = match.reasonCode;
         locationFilterReasonCounts[reasonCode] =
           (locationFilterReasonCounts[reasonCode] ?? 0) + 1;
@@ -681,9 +752,20 @@ export async function discoverJobsStep(args: {
       const blockedKeywordsLowerCase = blockedCompanyKeywords.map((value) =>
         value.toLowerCase(),
       );
-      const filteredDiscoveredJobs = locationFilteredJobs.filter(
-        (job) => !isBlockedEmployer(job.employer, blockedKeywordsLowerCase),
-      );
+      const filteredDiscoveredJobs = locationFilteredJobs.filter((job) => {
+        const blocked = isBlockedEmployer(
+          job.employer,
+          blockedKeywordsLowerCase,
+        );
+        if (blocked) {
+          const sourceResult = getSourceResultForJob(job.source);
+          if (sourceResult) sourceResult.filteredByBlockedCompanyCount += 1;
+        } else {
+          const sourceResult = getSourceResultForJob(job.source);
+          if (sourceResult) sourceResult.retainedCount += 1;
+        }
+        return !blocked;
+      });
       const droppedCount =
         locationFilteredJobs.length - filteredDiscoveredJobs.length;
 
@@ -718,6 +800,7 @@ export async function discoverJobsStep(args: {
             discoveredJobs: filteredDiscoveredJobs,
             sourceErrors,
             pendingChallenges,
+            sourceResults: sourceExecutionResults,
           },
           usedUnits: successfulSearchUnits,
         };
@@ -763,6 +846,7 @@ export async function discoverJobsStep(args: {
           discoveredJobs: filteredDiscoveredJobs,
           sourceErrors,
           pendingChallenges,
+          sourceResults: sourceExecutionResults,
         },
         usedUnits: successfulSearchUnits,
       };

@@ -2,8 +2,12 @@ import * as api from "@client/api";
 import { ListItem } from "@client/components/layout";
 import { PipelineProgress } from "@client/components/PipelineProgress";
 import { queryKeys } from "@client/lib/queryKeys";
-import { sourceLabel } from "@shared/extractors";
-import type { PipelineRun, PipelineRunInsights } from "@shared/types";
+import { isExtractorSourceId, sourceLabel } from "@shared/extractors";
+import type {
+  PipelineRun,
+  PipelineRunInsights,
+  PipelineRunSourceResult,
+} from "@shared/types";
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
@@ -97,6 +101,67 @@ function RunStatusBadge(props: { status: PipelineRunDisplayStatus }) {
 function formatSourceList(sources: string[]) {
   if (sources.length === 0) return "None";
   return sources.join(", ");
+}
+
+function formatPipelineSourceLabel(source: string) {
+  if (isExtractorSourceId(source)) return sourceLabel(source);
+  if (source === "jobspy") return "JobSpy";
+  if (source === "watchlist") return "Watchlist";
+  return source;
+}
+
+function formatSourceResultStatus(status: PipelineRunSourceResult["status"]) {
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function SourceResults(props: { results: PipelineRunSourceResult[] }) {
+  return (
+    <div className="mt-4 space-y-3">
+      <div className="text-sm font-medium">Source results</div>
+      <div className="space-y-2">
+        {props.results.map((result) => (
+          <div
+            key={`${result.source}-${result.requestedSources.join(",")}`}
+            className="rounded-lg border border-border/60 bg-background/40 p-3"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="font-medium">
+                {formatPipelineSourceLabel(result.source)}
+                {result.requestedSources.length > 0 &&
+                result.requestedSources.join(",") !== result.source ? (
+                  <span className="font-normal text-muted-foreground">
+                    {` — ${result.requestedSources
+                      .map(formatPipelineSourceLabel)
+                      .join(", ")}`}
+                  </span>
+                ) : null}
+              </div>
+              <Badge variant="outline">
+                {formatSourceResultStatus(result.status)}
+              </Badge>
+            </div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-4">
+              <MetricCard label="Fetched" value={result.fetchedCount} />
+              <MetricCard
+                label="Filtered by location"
+                value={result.filteredByLocationCount}
+              />
+              <MetricCard
+                label="Filtered by blocked company"
+                value={result.filteredByBlockedCompanyCount}
+              />
+              <MetricCard label="Retained" value={result.retainedCount} />
+            </div>
+            {result.errors.length > 0 ? (
+              <div className="mt-3 text-sm text-muted-foreground">
+                {result.errors.join(" ")}
+              </div>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function formatToggleState(value: boolean) {
@@ -408,6 +473,12 @@ function RunInsightsBody(props: {
                 <div className="mt-3 rounded-lg border border-border/60 bg-background/40 p-3 text-sm text-muted-foreground">
                   {savedDetails.resultSummary.sourceErrors.join(" ")}
                 </div>
+              ) : null}
+              {savedDetails.resultSummary.sourceResults &&
+              savedDetails.resultSummary.sourceResults.length > 0 ? (
+                <SourceResults
+                  results={savedDetails.resultSummary.sourceResults}
+                />
               ) : null}
             </div>
           </div>

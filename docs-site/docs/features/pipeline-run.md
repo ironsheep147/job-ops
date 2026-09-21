@@ -164,6 +164,23 @@ updates its counters live. **Exceptional matches** counts jobs with a
 suitability score above 90. Importing and processing continue in the background
 for now.
 
+### Reviewing completed run details
+
+Open a run from the pipeline runs list to inspect its saved execution summary.
+Newer runs include a **Source results** breakdown for each extractor execution
+unit. It shows:
+
+- how many jobs the source returned
+- how many were removed by location matching
+- how many were removed by blocked-company filters
+- how many were retained for import
+- source-specific errors, including timeouts and rate limits
+
+A run can be marked **Completed** even when one source fails or the final
+retained count is zero. Other sources continue independently, and the source
+breakdown explains whether they returned no jobs or whether their jobs were
+removed by the active filters. Older runs may not have this breakdown.
+
 ### Manual tab
 
 Manual mode opens direct import flow in the same modal.
