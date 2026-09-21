@@ -113,17 +113,20 @@ export interface HiringCafeResult {
   success: boolean;
   jobs: CreateJobInput[];
   error?: string;
+  sourceErrors?: string[];
   /** URL that needs a human to solve a Cloudflare challenge in a headed browser */
   challengeRequired?: string;
 }
 
 class HiringCafeChallengeError extends Error {
   readonly challengeUrl: string;
+  readonly upstreamStatus?: number;
 
-  constructor(challengeUrl = BASE_URL) {
+  constructor(challengeUrl = BASE_URL, upstreamStatus?: number) {
     super("Hiring Cafe returned a challenge page instead of search data.");
     this.name = "HiringCafeChallengeError";
     this.challengeUrl = challengeUrl;
+    this.upstreamStatus = upstreamStatus;
   }
 }
 
@@ -484,7 +487,7 @@ async function fetchHiringCafeSearchPage(args: {
   const body = await response.text();
   if (!response.ok) {
     if (CHALLENGE_BODY_PATTERN.test(body)) {
-      throw new HiringCafeChallengeError(url);
+      throw new HiringCafeChallengeError(url, response.status);
     }
     const statusText = response.statusText ? ` ${response.statusText}` : "";
     throw new Error(
@@ -496,7 +499,7 @@ async function fetchHiringCafeSearchPage(args: {
     return parseHiringCafeSsrPage(body);
   } catch (error) {
     if (error instanceof HiringCafeChallengeError) {
-      throw new HiringCafeChallengeError(url);
+      throw new HiringCafeChallengeError(url, response.status);
     }
     throw error;
   }
@@ -521,7 +524,7 @@ async function fetchHiringCafeJobDetail(args: {
   const body = await response.text();
   if (!response.ok) {
     if (CHALLENGE_BODY_PATTERN.test(body)) {
-      throw new HiringCafeChallengeError(url.toString());
+      throw new HiringCafeChallengeError(url.toString(), response.status);
     }
     return null;
   }
@@ -529,9 +532,17 @@ async function fetchHiringCafeJobDetail(args: {
   try {
     return parseHiringCafeJobDetailPage(body, url.toString());
   } catch (error) {
-    if (error instanceof HiringCafeChallengeError) throw error;
+    if (error instanceof HiringCafeChallengeError) {
+      throw new HiringCafeChallengeError(url.toString(), response.status);
+    }
     return null;
   }
+}
+
+function formatDetailChallengeWarning(error: HiringCafeChallengeError): string {
+  const status =
+    error.upstreamStatus === undefined ? "" : ` (HTTP ${error.upstreamStatus})`;
+  return `Hiring Cafe job-detail enrichment was blocked${status} at ${error.challengeUrl}; returned listing data for this run.`;
 }
 
 async function enrichHiringCafeJobWithDetail(args: {
@@ -779,6 +790,7 @@ export async function runHiringCafe(
   const workplaceTypes = parseWorkplaceTypes(options.workplaceTypes);
   const jobs: CreateJobInput[] = [];
   const seen = new Set<string>();
+  let detailChallenge: HiringCafeChallengeError | undefined;
 
   try {
     const fetchImpl =
@@ -835,10 +847,18 @@ export async function runHiringCafe(
             const dedupeKey = getHiringCafeDedupeKey(rawJob);
             if (dedupeKey && seen.has(dedupeKey)) continue;
 
-            const enrichedRawJob = await enrichHiringCafeJobWithDetail({
-              rawJob,
-              fetchImpl,
-            });
+            let enrichedRawJob = rawJob;
+            if (!detailChallenge) {
+              try {
+                enrichedRawJob = await enrichHiringCafeJobWithDetail({
+                  rawJob,
+                  fetchImpl,
+                });
+              } catch (error) {
+                if (!(error instanceof HiringCafeChallengeError)) throw error;
+                detailChallenge = error;
+              }
+            }
             const mapped = mapHiringCafeJob(enrichedRawJob);
             if (!mapped) continue;
 
@@ -873,6 +893,14 @@ export async function runHiringCafe(
           jobsFoundTerm: termCollected,
         });
       }
+    }
+
+    if (detailChallenge) {
+      return {
+        success: true,
+        jobs,
+        sourceErrors: [formatDetailChallengeWarning(detailChallenge)],
+      };
     }
 
     return { success: true, jobs };

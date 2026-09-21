@@ -141,6 +141,7 @@ export const manifest: ExtractorManifest = {
     return {
       success: true,
       jobs: result.jobs,
+      sourceErrors: result.sourceErrors,
     };
   },
 };

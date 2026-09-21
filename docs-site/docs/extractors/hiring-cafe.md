@@ -64,6 +64,7 @@ npm --workspace hiringcafe-extractor run start
 
 - The extractor first attempts Camoufox-backed Firefox and falls back to vanilla Firefox startup if Camoufox is unstable locally.
 - If upstream blocks continue, retry later or reduce run concurrency at the pipeline level by selecting fewer sources.
+- If a job detail page is blocked after search results were collected, JobOps keeps the listing-quality jobs, skips the remaining detail-page fetches for that run, and records a source warning. This does not open the challenge viewer because solving one rate-limited detail page does not reliably unblock the next one.
 
 ### Hiring Cafe does not appear in sources
 

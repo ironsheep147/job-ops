@@ -98,4 +98,33 @@ describe("hiringcafe manifest", () => {
       }),
     );
   });
+
+  it("forwards detail-enrichment warnings from a successful run", async () => {
+    const { manifest } = await import("../manifest");
+    const { runHiringCafe } = await import("../src/run");
+    const runHiringCafeMock = vi.mocked(runHiringCafe);
+    runHiringCafeMock.mockResolvedValue({
+      success: true,
+      jobs: [],
+      sourceErrors: [
+        "Hiring Cafe detail enrichment was blocked; returned listing data.",
+      ],
+    });
+
+    const result = await manifest.run({
+      source: "hiringcafe",
+      selectedSources: ["hiringcafe"],
+      settings: {},
+      searchTerms: ["web developer"],
+      selectedCountry: "worldwide",
+    });
+
+    expect(result).toEqual({
+      success: true,
+      jobs: [],
+      sourceErrors: [
+        "Hiring Cafe detail enrichment was blocked; returned listing data.",
+      ],
+    });
+  });
 });
