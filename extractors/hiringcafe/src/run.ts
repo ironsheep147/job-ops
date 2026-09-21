@@ -29,10 +29,8 @@ const JOB_DETAIL_BASE_URL = "https://hiringcafe.com/job/";
 // layer can serve the interstitial.
 const CHALLENGE_BODY_PATTERN =
   /cloudflare|cf-browser-verification|challenge-platform|vercel security checkpoint|vercel-protection|_vcrcs/i;
-// Cloudflare rate-limits bursts of requests (429 + managed challenge after
-// ~4 rapid hits), so space requests out and back off before giving up.
+// Space requests out so normal search and detail traffic does not form a burst.
 const REQUEST_DELAY_MS = 800;
-const RATE_LIMIT_RETRY_DELAYS_MS = [5_000, 15_000];
 const DEFAULT_MAX_JOBS_PER_TERM = 200;
 const DEFAULT_SEARCH_TERM = "web developer";
 const DEFAULT_DATE_FETCHED_PAST_N_DAYS = 30;
@@ -130,6 +128,13 @@ class HiringCafeChallengeError extends Error {
   }
 }
 
+class HiringCafeRateLimitError extends HiringCafeChallengeError {
+  constructor(challengeUrl: string, upstreamStatus = 429) {
+    super(challengeUrl, upstreamStatus);
+    this.name = "HiringCafeRateLimitError";
+  }
+}
+
 /**
  * Default HTTP client: impit impersonates a real Firefox TLS fingerprint and
  * shares the persisted cookie jar (and User-Agent) written by the headed
@@ -165,23 +170,18 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Spaces requests out and retries 429 rate-limit responses with backoff, so a
- * burst of detail-page fetches doesn't trip Cloudflare's rate rule (which
- * serves a challenge page no human solve can meaningfully fix).
+ * Spaces requests out so a normal search run does not form a request burst.
+ * A 429 is handled by the caller as a non-interactive rate limit: retrying it
+ * immediately can turn it into a managed challenge that a human solve cannot
+ * clear.
  */
-function withThrottleAndRetry(fetchImpl: typeof fetch): typeof fetch {
+function withThrottle(fetchImpl: typeof fetch): typeof fetch {
   let lastRequestAt = 0;
   return (async (input: RequestInfo | URL, init?: RequestInit) => {
     const wait = lastRequestAt + REQUEST_DELAY_MS - Date.now();
     if (wait > 0) await sleep(wait);
-    let response = await fetchImpl(input, init);
+    const response = await fetchImpl(input, init);
     lastRequestAt = Date.now();
-    for (const delay of RATE_LIMIT_RETRY_DELAYS_MS) {
-      if (response.status !== 429) break;
-      await sleep(delay);
-      response = await fetchImpl(input, init);
-      lastRequestAt = Date.now();
-    }
     return response;
   }) as typeof fetch;
 }
@@ -484,6 +484,9 @@ async function fetchHiringCafeSearchPage(args: {
     signal: AbortSignal.timeout(20_000),
   });
 
+  if (response.status === 429) {
+    throw new HiringCafeRateLimitError(url, response.status);
+  }
   const body = await response.text();
   if (!response.ok) {
     if (CHALLENGE_BODY_PATTERN.test(body)) {
@@ -521,6 +524,9 @@ async function fetchHiringCafeJobDetail(args: {
     signal: AbortSignal.timeout(20_000),
   });
 
+  if (response.status === 429) {
+    throw new HiringCafeRateLimitError(url.toString(), response.status);
+  }
   const body = await response.text();
   if (!response.ok) {
     if (CHALLENGE_BODY_PATTERN.test(body)) {
@@ -543,6 +549,10 @@ function formatDetailChallengeWarning(error: HiringCafeChallengeError): string {
   const status =
     error.upstreamStatus === undefined ? "" : ` (HTTP ${error.upstreamStatus})`;
   return `Hiring Cafe job-detail enrichment was blocked${status} at ${error.challengeUrl}; returned listing data for this run.`;
+}
+
+function formatSearchRateLimitWarning(error: HiringCafeRateLimitError): string {
+  return `Hiring Cafe was rate limited (HTTP ${error.upstreamStatus ?? 429}); stopped further requests for this run. Any jobs already collected were kept. Retry later.`;
 }
 
 async function enrichHiringCafeJobWithDetail(args: {
@@ -794,7 +804,7 @@ export async function runHiringCafe(
 
   try {
     const fetchImpl =
-      options.fetchImpl ?? withThrottleAndRetry(await createDefaultFetchImpl());
+      options.fetchImpl ?? withThrottle(await createDefaultFetchImpl());
     const countryLocation = resolveHiringCafeCountryLocation(country);
 
     for (let runIndex = 0; runIndex < runLocations.length; runIndex += 1) {
@@ -855,6 +865,7 @@ export async function runHiringCafe(
                   fetchImpl,
                 });
               } catch (error) {
+                if (error instanceof HiringCafeRateLimitError) throw error;
                 if (!(error instanceof HiringCafeChallengeError)) throw error;
                 detailChallenge = error;
               }
@@ -905,6 +916,14 @@ export async function runHiringCafe(
 
     return { success: true, jobs };
   } catch (error) {
+    if (error instanceof HiringCafeRateLimitError) {
+      return {
+        success: true,
+        jobs,
+        sourceErrors: [formatSearchRateLimitWarning(error)],
+      };
+    }
+
     const message = error instanceof Error ? error.message : "Unknown error";
     return {
       success: false,

@@ -252,6 +252,36 @@ describe("runHiringCafe", () => {
     );
   });
 
+  it("keeps collected jobs and stops after a search page is rate limited", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        createTextResponse(createSearchHtml([createRawJob()], false)),
+      )
+      .mockResolvedValueOnce(
+        createTextResponse("<html>challenges.cloudflare.com</html>", {
+          ok: false,
+          status: 429,
+          statusText: "Too Many Requests",
+        }),
+      );
+
+    const result = await runHiringCafe({
+      searchTerms: ["web developer"],
+      country: "worldwide",
+      maxJobsPerTerm: 2,
+      fetchImpl: fetchMock as typeof fetch,
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      jobs: [expect.objectContaining({ sourceJobId: "job-1" })],
+      sourceErrors: [expect.stringContaining("rate limited")],
+    });
+    expect(result.challengeRequired).toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("requires a solver when the search page itself is challenged", async () => {
     const fetchMock = vi.fn(() =>
       Promise.resolve(
@@ -297,8 +327,8 @@ describe("runHiringCafe", () => {
         return Promise.resolve(
           createTextResponse("<html>challenges.cloudflare.com</html>", {
             ok: false,
-            status: 429,
-            statusText: "Too Many Requests",
+            status: 403,
+            statusText: "Forbidden",
           }),
         );
       }
@@ -322,7 +352,7 @@ describe("runHiringCafe", () => {
         expect.objectContaining({ sourceJobId: "job-2" }),
       ],
       sourceErrors: [
-        expect.stringContaining("429"),
+        expect.stringContaining("403"),
       ],
     });
     expect(result.sourceErrors?.[0]).toContain(

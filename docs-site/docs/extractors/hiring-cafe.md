@@ -62,8 +62,9 @@ npm --workspace hiringcafe-extractor run start
 
 ### Hiring Cafe returns 429 / Vercel security checkpoint
 
-- The extractor first attempts Camoufox-backed Firefox and falls back to vanilla Firefox startup if Camoufox is unstable locally.
-- If upstream blocks continue, retry later or reduce run concurrency at the pipeline level by selecting fewer sources.
+- The challenge viewer uses Camoufox-backed Firefox to complete browser checks.
+- A `429` is treated as a rate limit, not a browser challenge. JobOps stops further Hiring Cafe requests for that run, keeps any jobs already collected, and records a warning instead of opening the challenge viewer.
+- Retry the source later; immediate retries can escalate a rate limit into a Cloudflare challenge.
 - If a job detail page is blocked after search results were collected, JobOps keeps the listing-quality jobs, skips the remaining detail-page fetches for that run, and records a source warning. This does not open the challenge viewer because solving one rate-limited detail page does not reliably unblock the next one.
 
 ### Hiring Cafe does not appear in sources
